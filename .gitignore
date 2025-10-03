@@ -138,3 +138,10 @@ logs/*.log
 *.db
 config.py
 secret_key.txt
+
+# PyInstaller build files
+build/
+dist/
+*.spec
+__pycache__/
+*.pyc

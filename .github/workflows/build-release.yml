@@ -1,0 +1,257 @@
+name: Build and Release
+
+on:
+  push:
+    tags:
+      - 'v*.*.*'
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Release version (e.g., v1.0.0)'
+        required: true
+        default: 'v1.0.0'
+
+jobs:
+  build:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        include:
+          - os: windows-latest
+            platform: windows
+            ext: .exe
+            python-version: '3.9'
+          - os: ubuntu-latest
+            platform: linux
+            ext: ''
+            python-version: '3.9'
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Set up Python ${{ matrix.python-version }}
+      uses: actions/setup-python@v4
+      with:
+        python-version: ${{ matrix.python-version }}
+
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt
+        pip install pyinstaller
+
+    - name: Create build script (Windows)
+      if: matrix.platform == 'windows'
+      run: |
+        echo @echo off > build.bat
+        echo echo Building EDUKY-Monitor for Windows... >> build.bat
+        echo pyinstaller --onefile --windowed --name eduky-monitor-windows --icon=web/static/favicon.ico --add-data "web;web" --add-data "logs;logs" --hidden-import=APScheduler --hidden-import=flask --hidden-import=requests run_app.py >> build.bat
+        echo echo Build completed! >> build.bat
+      shell: cmd
+
+    - name: Create build script (Linux)
+      if: matrix.platform == 'linux'
+      run: |
+        cat > build.sh << 'EOF'
+        #!/bin/bash
+        echo "Building EDUKY-Monitor for Linux..."
+        pyinstaller --onefile --name eduky-monitor-linux \
+          --add-data "web:web" \
+          --add-data "logs:logs" \
+          --hidden-import=APScheduler \
+          --hidden-import=flask \
+          --hidden-import=requests \
+          run_app.py
+        echo "Build completed!"
+        EOF
+        chmod +x build.sh
+
+    - name: Build executable (Windows)
+      if: matrix.platform == 'windows'
+      run: build.bat
+      shell: cmd
+
+    - name: Build executable (Linux)
+      if: matrix.platform == 'linux'
+      run: ./build.sh
+
+    - name: Create startup script (Windows)
+      if: matrix.platform == 'windows'
+      run: |
+        echo @echo off > dist/start-eduky-monitor.bat
+        echo echo Starting EDUKY-Monitor... >> dist/start-eduky-monitor.bat
+        echo eduky-monitor-windows.exe >> dist/start-eduky-monitor.bat
+        echo pause >> dist/start-eduky-monitor.bat
+
+    - name: Create startup script (Linux)
+      if: matrix.platform == 'linux'
+      run: |
+        cat > dist/start-eduky-monitor.sh << 'EOF'
+        #!/bin/bash
+        echo "Starting EDUKY-Monitor..."
+        ./eduky-monitor-linux
+        EOF
+        chmod +x dist/start-eduky-monitor.sh
+
+    - name: Create README for release (Windows)
+      if: matrix.platform == 'windows'
+      run: |
+        echo # EDUKY-Monitor Windows 发行版 > dist/README.txt
+        echo. >> dist/README.txt
+        echo ## 快速开始 >> dist/README.txt
+        echo 1. 双击 start-eduky-monitor.bat 启动程序 >> dist/README.txt
+        echo 2. 打开浏览器访问 http://localhost:5000 >> dist/README.txt
+        echo 3. 默认用户名: admin, 默认密码: admin123 >> dist/README.txt
+        echo. >> dist/README.txt
+        echo ## 说明 >> dist/README.txt
+        echo - 程序会在后台运行，关闭命令行窗口即可停止 >> dist/README.txt
+        echo - 数据库文件会自动创建在程序目录下 >> dist/README.txt
+        echo - 日志文件保存在 logs 目录中 >> dist/README.txt
+
+    - name: Create README for release (Linux)
+      if: matrix.platform == 'linux'
+      run: |
+        cat > dist/README.md << 'EOF'
+        # EDUKY-Monitor Linux 发行版
+
+        ## 快速开始
+        1. 运行启动脚本: `./start-eduky-monitor.sh`
+        2. 打开浏览器访问 http://localhost:5000
+        3. 默认用户名: admin, 默认密码: admin123
+
+        ## 说明
+        - 程序会在前台运行，按 Ctrl+C 停止
+        - 数据库文件会自动创建在程序目录下
+        - 日志文件保存在 logs 目录中
+
+        ## 系统服务安装 (可选)
+        如需安装为系统服务，请使用项目中的脚本:
+        ```bash
+        # 下载完整项目
+        git clone https://github.com/eduky/EDUKY-Monitor.git
+        cd EDUKY-Monitor/scripts/linux
+        sudo ./install_systemd.sh
+        ```
+        EOF
+
+    - name: Package files (Windows)
+      if: matrix.platform == 'windows'
+      run: |
+        mkdir package
+        copy dist\eduky-monitor-windows.exe package\
+        copy dist\start-eduky-monitor.bat package\
+        copy dist\README.txt package\
+        mkdir package\logs
+        echo. > package\logs\.gitkeep
+      shell: cmd
+
+    - name: Package files (Linux)
+      if: matrix.platform == 'linux'
+      run: |
+        mkdir package
+        cp dist/eduky-monitor-linux package/
+        cp dist/start-eduky-monitor.sh package/
+        cp dist/README.md package/
+        mkdir package/logs
+        touch package/logs/.gitkeep
+
+    - name: Create archive (Windows)
+      if: matrix.platform == 'windows'
+      run: |
+        cd package
+        tar -czf ../eduky-monitor-${{ matrix.platform }}.tar.gz *
+      shell: bash
+
+    - name: Create archive (Linux)
+      if: matrix.platform == 'linux'
+      run: |
+        cd package
+        tar -czf ../eduky-monitor-${{ matrix.platform }}.tar.gz *
+
+    - name: Upload artifact
+      uses: actions/upload-artifact@v3
+      with:
+        name: eduky-monitor-${{ matrix.platform }}
+        path: eduky-monitor-${{ matrix.platform }}.tar.gz
+
+  release:
+    needs: build
+    runs-on: ubuntu-latest
+    if: startsWith(github.ref, 'refs/tags/') || github.event_name == 'workflow_dispatch'
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Download all artifacts
+      uses: actions/download-artifact@v3
+
+    - name: Get release version
+      id: get_version
+      run: |
+        if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+          echo "version=${{ github.event.inputs.version }}" >> $GITHUB_OUTPUT
+        else
+          echo "version=${GITHUB_REF#refs/tags/}" >> $GITHUB_OUTPUT
+        fi
+
+    - name: Create Release
+      id: create_release
+      uses: actions/create-release@v1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        tag_name: ${{ steps.get_version.outputs.version }}
+        release_name: EDUKY-Monitor ${{ steps.get_version.outputs.version }}
+        body: |
+          ## EDUKY-Monitor ${{ steps.get_version.outputs.version }} 发行版
+
+          ### 🚀 新特性
+          - 完整的库存监控系统
+          - Web界面管理
+          - 多平台支持
+
+          ### 📦 下载说明
+          
+          **Windows 用户:**
+          - 下载 `eduky-monitor-windows.tar.gz`
+          - 解压后双击 `start-eduky-monitor.bat` 启动
+
+          **Linux 用户:**
+          - 下载 `eduky-monitor-linux.tar.gz`
+          - 解压后运行 `./start-eduky-monitor.sh` 启动
+
+          ### 🌐 访问方式
+          启动后在浏览器中访问: http://localhost:5000
+          
+          **默认登录信息:**
+          - 用户名: `admin`
+          - 密码: `admin123`
+
+          ### 📝 注意事项
+          - 首次运行会自动创建数据库
+          - 建议首次登录后立即修改默认密码
+          - 程序数据保存在运行目录下
+        draft: false
+        prerelease: false
+
+    - name: Upload Windows Release Asset
+      uses: actions/upload-release-asset@v1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        upload_url: ${{ steps.create_release.outputs.upload_url }}
+        asset_path: ./eduky-monitor-windows/eduky-monitor-windows.tar.gz
+        asset_name: eduky-monitor-windows.tar.gz
+        asset_content_type: application/gzip
+
+    - name: Upload Linux Release Asset
+      uses: actions/upload-release-asset@v1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        upload_url: ${{ steps.create_release.outputs.upload_url }}
+        asset_path: ./eduky-monitor-linux/eduky-monitor-linux.tar.gz
+        asset_name: eduky-monitor-linux.tar.gz
+        asset_content_type: application/gzip
