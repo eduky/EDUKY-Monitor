@@ -13,8 +13,13 @@ if %errorlevel% neq 0 (
 )
 
 echo.
+echo 正在检测Python版本...
+for /f "tokens=2" %%i in ('python --version 2^>^&1') do set PYTHON_VERSION=%%i
+echo Python版本: %PYTHON_VERSION%
+
+echo.
 echo 正在安装构建依赖...
-pip install pyinstaller
+pip install "pyinstaller>=6.10.0"
 if %errorlevel% neq 0 (
     echo 错误: 安装 PyInstaller 失败
     pause
@@ -23,11 +28,23 @@ if %errorlevel% neq 0 (
 
 echo.
 echo 正在安装项目依赖...
-pip install -r requirements.txt
+:: 检查是否为Python 3.13+，使用兼容的requirements文件
+echo %PYTHON_VERSION% | findstr /C:"3.13" >nul
+if %errorlevel% equ 0 (
+    echo 检测到Python 3.13，使用兼容版本的依赖...
+    pip install -r requirements-py313.txt
+) else (
+    pip install -r requirements.txt
+)
 if %errorlevel% neq 0 (
     echo 错误: 安装项目依赖失败
-    pause
-    exit /b 1
+    echo 尝试单独安装依赖包...
+    pip install Flask Flask-SQLAlchemy requests APScheduler beautifulsoup4 python-telegram-bot lxml Werkzeug pytz ntplib
+    if %errorlevel% neq 0 (
+        echo 错误: 依赖安装彻底失败
+        pause
+        exit /b 1
+    )
 )
 
 echo.
