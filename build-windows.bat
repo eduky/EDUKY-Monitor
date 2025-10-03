@@ -38,19 +38,32 @@ if exist "build" rmdir /s /q build
 echo.
 echo 正在构建可执行文件...
 pyinstaller --onefile ^
+    --console ^
     --name eduky-monitor-windows ^
     --add-data "web;web" ^
     --hidden-import=APScheduler ^
+    --hidden-import=apscheduler.schedulers.background ^
+    --hidden-import=apscheduler.triggers.interval ^
     --hidden-import=flask ^
+    --hidden-import=flask.templating ^
+    --hidden-import=flask.json ^
     --hidden-import=requests ^
     --hidden-import=flask_sqlalchemy ^
     --hidden-import=sqlalchemy ^
+    --hidden-import=sqlalchemy.sql.default_comparator ^
     --hidden-import=beautifulsoup4 ^
+    --hidden-import=bs4 ^
     --hidden-import=telegram ^
     --hidden-import=lxml ^
     --hidden-import=werkzeug ^
+    --hidden-import=werkzeug.security ^
     --hidden-import=pytz ^
     --hidden-import=ntplib ^
+    --hidden-import=logging.handlers ^
+    --hidden-import=sqlite3 ^
+    --hidden-import=json ^
+    --hidden-import=datetime ^
+    --hidden-import=threading ^
     run_app.py
 
 if %errorlevel% neq 0 (
