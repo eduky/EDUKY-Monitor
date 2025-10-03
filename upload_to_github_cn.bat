@@ -1,73 +1,76 @@
 @echo off
-chcp 65001 >nul
+title GitHub Upload Tool
+chcp 936 >nul 2>&1
+
+cls
+echo.
 echo ===========================================
-echo          FAKA Monitor GitHub 上传工具
+echo          GitHub Upload Tool
 echo ===========================================
 echo.
-
-echo 请确保你已经：
-echo 1. 在GitHub上创建了一个新的仓库
-echo 2. 复制了仓库的HTTPS或SSH地址
+echo Please ensure you have:
+echo 1. Created a repository on GitHub
+echo 2. Have the repository URL ready
 echo.
 
-set /p REPO_URL="请输入GitHub仓库地址 (例如: https://github.com/username/faka-monitor.git): "
+set /p REPO_URL="Enter GitHub repository URL (e.g., https://github.com/username/faka-monitor.git): "
 
 if "%REPO_URL%"=="" (
-    echo 错误：请提供有效的仓库地址！
+    echo Error: Please provide a valid repository address!
     pause
     exit /b 1
 )
 
 echo.
-echo 正在添加远程仓库...
+echo Adding remote repository...
 git remote remove origin 2>nul
 git remote add origin "%REPO_URL%"
 
 if %ERRORLEVEL% NEQ 0 (
-    echo 添加远程仓库时出错！
+    echo Error adding remote repository!
     pause
     exit /b 1
 )
 
 echo.
-echo 检查git状态...
+echo Checking git status...
 git status --porcelain > nul
 if %ERRORLEVEL% NEQ 0 (
-    echo 错误：不是git仓库！
+    echo Error: Not a git repository!
     pause
     exit /b 1
 )
 
 echo.
-echo 添加所有文件...
+echo Adding all files...
 git add .
 
 echo.
-echo 提交更改...
+echo Committing changes...
 git commit -m "Update project files" 2>nul
 
 echo.
-echo 设置分支为main...
+echo Setting branch to main...
 git branch -M main
 
 echo.
-echo 推送到GitHub...
+echo Pushing to GitHub...
 git push -u origin main
 
 if %ERRORLEVEL% EQU 0 (
     echo.
-    echo 成功！项目已上传到GitHub
-    echo 你可以访问以下地址查看你的项目：
+    echo Success! Project has been uploaded to GitHub
+    echo You can visit your project at:
     echo %REPO_URL%
 ) else (
     echo.
-    echo 上传失败！请检查：
-    echo 1. 网络连接是否正常
-    echo 2. 仓库地址是否正确
-    echo 3. 是否有推送权限
-    echo 4. GitHub上的仓库是否存在
+    echo Upload failed! Please check:
+    echo 1. Network connection
+    echo 2. Repository address is correct
+    echo 3. You have push permissions
+    echo 4. Repository exists on GitHub
     echo.
-    echo 如果是第一次使用，可能需要登录GitHub账号
+    echo If this is your first time, you may need to login to GitHub
 )
 
 echo.
