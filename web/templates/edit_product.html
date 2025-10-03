@@ -1,0 +1,337 @@
+{% extends "base.html" %}
+
+{% block title %}编辑商品 - EDUKY-商品监控系统{% endblock %}
+
+{% block page_title %}编辑商品{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-lg-8">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0">
+                    <i class="fas fa-edit me-2"></i>
+                    编辑商品 - {{ product.name }}
+                </h5>
+            </div>
+            <div class="card-body">
+                <form method="POST">
+                    <div class="mb-3">
+                        <label for="name" class="form-label">商品名称 <span class="text-danger">*</span></label>
+                        <div class="input-group">
+                            <input type="text" class="form-control" id="name" name="name" value="{{ product.name }}" required>
+                            <button type="button" class="btn btn-outline-secondary" id="autoGetName" onclick="autoGetProductName()">
+                                <i class="fas fa-magic"></i> 自动获取
+                            </button>
+                        </div>
+                        <div class="form-text">商品的名称，或点击"自动获取"从URL中获取</div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="url" class="form-label">监控URL <span class="text-danger">*</span></label>
+                        <input type="url" class="form-control" id="url" name="url" value="{{ product.url }}" required onblur="checkAutoGetName()">
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="target_selector" class="form-label">CSS选择器 <span class="text-danger">*</span></label>
+                        <div class="input-group">
+                            <input type="text" class="form-control" id="target_selector" name="target_selector" value="{{ product.target_selector }}" required>
+                            <button type="button" class="btn btn-outline-primary" id="testSelector" onclick="testCSSSelector()">
+                                <i class="fas fa-search"></i> 测试
+                            </button>
+                        </div>
+                        <div class="form-text">
+                            用于定位库存数量的CSS选择器，点击"测试"按钮可以验证选择器是否正确
+                        </div>
+                        <!-- 测试结果显示区域 -->
+                        <div id="testResult" class="mt-2" style="display: none;">
+                            <div class="alert alert-info">
+                                <div id="testResultContent"></div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="threshold" class="form-label">库存阈值</label>
+                        <input type="number" class="form-control" id="threshold" name="threshold" value="{{ product.threshold }}" min="0">
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="buy_url" class="form-label">购买链接</label>
+                        <input type="url" class="form-control" id="buy_url" name="buy_url" value="{{ product.buy_url or '' }}">
+                        <div class="form-text">可选，用于通知中的购买按钮。如果不填写将使用监控URL</div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" id="is_active" name="is_active" {% if product.is_active %}checked{% endif %}>
+                            <label class="form-check-label" for="is_active">
+                                启用监控
+                            </label>
+                        </div>
+                    </div>
+                    
+                    <!-- 商品信息展示 -->
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <div class="card bg-light">
+                                <div class="card-body">
+                                    <h6 class="card-title">当前状态</h6>
+                                    <p class="mb-1"><strong>当前库存：</strong>{{ product.current_stock }}</p>
+                                    <p class="mb-1"><strong>上次库存：</strong>{{ product.last_stock }}</p>
+                                    <p class="mb-0"><strong>最后更新：</strong>
+                                        {% if product.updated_at %}
+                                            {{ product.updated_at|china_time }}
+                                        {% else %}
+                                            从未更新
+                                        {% endif %}
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="card bg-light">
+                                <div class="card-body">
+                                    <h6 class="card-title">创建信息</h6>
+                                    <p class="mb-1"><strong>商品ID：</strong>{{ product.id }}</p>
+                                    <p class="mb-0"><strong>创建时间：</strong>
+                                        {% if product.created_at %}
+                                            {{ product.created_at|china_time }}
+                                        {% else %}
+                                            未知
+                                        {% endif %}
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="d-flex justify-content-between">
+                        <a href="{{ url_for('products') }}" class="btn btn-secondary">
+                            <i class="fas fa-arrow-left me-1"></i>
+                            返回
+                        </a>
+                        <div>
+                            <button type="button" class="btn btn-info me-2" onclick="testMonitor()">
+                                <i class="fas fa-play me-1"></i>
+                                测试监控
+                            </button>
+                            <button type="submit" class="btn btn-primary">
+                                <i class="fas fa-save me-1"></i>
+                                保存更改
+                            </button>
+                        </div>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+function testMonitor() {
+    const btn = event.target;
+    const originalHtml = btn.innerHTML;
+    
+    btn.disabled = true;
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i>测试中...';
+    
+    fetch(`/api/test_monitor/{{ product.id }}`, {
+        method: 'POST'
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            showAlert(`测试成功！当前库存: ${data.stock}`, 'success');
+            // 刷新页面以显示最新数据
+            setTimeout(() => location.reload(), 1000);
+        } else {
+            showAlert(`测试失败: ${data.message}`, 'danger');
+        }
+    })
+    .catch(error => {
+        showAlert('网络错误', 'danger');
+    })
+    .finally(() => {
+        btn.disabled = false;
+        btn.innerHTML = originalHtml;
+    });
+}
+
+// 自动获取商品名称
+function autoGetProductName() {
+    const url = document.getElementById('url').value.trim();
+    const nameInput = document.getElementById('name');
+    const button = document.getElementById('autoGetName');
+    
+    if (!url) {
+        showAlert('请先输入监控URL', 'warning');
+        return;
+    }
+    
+    // 验证URL格式
+    try {
+        new URL(url);
+    } catch {
+        showAlert('请输入有效的URL地址', 'warning');
+        return;
+    }
+    
+    // 显示加载状态
+    const originalHtml = button.innerHTML;
+    button.disabled = true;
+    button.innerHTML = '<i class="fas fa-spinner fa-spin"></i> 获取中...';
+    
+    fetch('/api/get_page_title', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ url: url })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            nameInput.value = data.title;
+            showAlert('商品名称获取成功！您可以根据需要进行修改', 'success');
+            nameInput.focus();
+            nameInput.select();
+        } else {
+            showAlert(data.error || '获取标题失败，请手动输入', 'warning');
+        }
+    })
+    .catch(error => {
+        console.error('获取标题失败:', error);
+        showAlert('网络错误，请手动输入商品名称', 'danger');
+    })
+    .finally(() => {
+        button.disabled = false;
+        button.innerHTML = originalHtml;
+    });
+}
+
+// 检查是否可以自动获取名称
+function checkAutoGetName() {
+    const url = document.getElementById('url').value.trim();
+    const button = document.getElementById('autoGetName');
+    
+    if (url) {
+        button.classList.add('btn-outline-primary');
+        button.classList.remove('btn-outline-secondary');
+    } else {
+        button.classList.add('btn-outline-secondary');
+        button.classList.remove('btn-outline-primary');
+    }
+}
+
+// 测试CSS选择器
+function testCSSSelector() {
+    const url = document.getElementById('url').value.trim();
+    const selector = document.getElementById('target_selector').value.trim();
+    const button = document.getElementById('testSelector');
+    const testResult = document.getElementById('testResult');
+    const testResultContent = document.getElementById('testResultContent');
+    
+    // 验证输入
+    if (!url) {
+        showAlert('请先输入监控URL', 'warning');
+        return;
+    }
+    
+    if (!selector) {
+        showAlert('请先输入CSS选择器', 'warning');
+        return;
+    }
+    
+    // 验证URL格式
+    try {
+        new URL(url);
+    } catch {
+        showAlert('请输入有效的URL地址', 'warning');
+        return;
+    }
+    
+    // 显示加载状态
+    const originalHtml = button.innerHTML;
+    button.disabled = true;
+    button.innerHTML = '<i class="fas fa-spinner fa-spin"></i> 测试中...';
+    
+    // 隐藏之前的测试结果
+    testResult.style.display = 'none';
+    
+    fetch('/api/test_selector', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ 
+            url: url,
+            selector: selector
+        })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            // 显示成功结果
+            testResultContent.innerHTML = `
+                <div class="d-flex align-items-center mb-2">
+                    <i class="fas fa-check-circle text-success me-2"></i>
+                    <strong>选择器测试成功！</strong>
+                </div>
+                <div class="small">
+                    <div><strong>检测到的库存数量:</strong> <span class="badge bg-success">${data.stock_count}</span></div>
+                    ${data.extracted_text ? `<div class="mt-1"><strong>提取的原始文本:</strong> <code>${data.extracted_text}</code></div>` : ''}
+                </div>
+            `;
+            testResult.className = 'mt-2';
+            testResult.querySelector('.alert').className = 'alert alert-success';
+            showAlert('CSS选择器测试成功！', 'success');
+        } else {
+            // 显示错误结果
+            testResultContent.innerHTML = `
+                <div class="d-flex align-items-center mb-2">
+                    <i class="fas fa-exclamation-triangle text-warning me-2"></i>
+                    <strong>选择器测试失败</strong>
+                </div>
+                <div class="small">
+                    <div><strong>错误信息:</strong> ${data.error}</div>
+                    ${data.details ? `<div class="mt-1"><strong>详细信息:</strong> ${data.details}</div>` : ''}
+                    <div class="mt-2 text-muted">
+                        <i class="fas fa-lightbulb me-1"></i>
+                        请检查CSS选择器是否正确
+                    </div>
+                </div>
+            `;
+            testResult.className = 'mt-2';
+            testResult.querySelector('.alert').className = 'alert alert-warning';
+            showAlert('CSS选择器测试失败，请检查选择器', 'warning');
+        }
+        
+        // 显示测试结果
+        testResult.style.display = 'block';
+    })
+    .catch(error => {
+        console.error('测试CSS选择器失败:', error);
+        testResultContent.innerHTML = `
+            <div class="d-flex align-items-center mb-2">
+                <i class="fas fa-times-circle text-danger me-2"></i>
+                <strong>网络错误</strong>
+            </div>
+            <div class="small text-muted">
+                无法连接到测试服务，请稍后重试
+            </div>
+        `;
+        testResult.className = 'mt-2';
+        testResult.querySelector('.alert').className = 'alert alert-danger';
+        testResult.style.display = 'block';
+        showAlert('网络错误，请稍后重试', 'danger');
+    })
+    .finally(() => {
+        button.disabled = false;
+        button.innerHTML = originalHtml;
+    });
+}
+</script>
+{% endblock %}

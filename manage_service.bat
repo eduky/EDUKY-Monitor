@@ -1,0 +1,3 @@
+@echo off
+echo 管理Windows服务...
+scripts\windows\manage_windows_service.bat

@@ -1,0 +1,3 @@
+@echo off
+echo 启动环境测试...
+scripts\windows\test_environment.bat

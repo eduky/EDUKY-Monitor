@@ -1,0 +1,1257 @@
+{% extends "base.html" %}
+
+{% block title %}监控日志 - EDUKY-商品监控系统{% endblock %}
+
+{% block page_title %}监控日志{% endblock %}
+
+{% block extra_css %}
+<style>
+    /* 确保内容正确显示在main区域内 */
+    .content-wrapper {
+        min-height: calc(100vh - 56px);
+        background-color: #f8f9fa;
+    }
+    .log-entry {
+        margin-bottom: 0.5rem;
+        padding: 1rem;
+        border-radius: 8px;
+        border-left: 4px solid #007bff;
+        background: white;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        transition: all 0.2s ease;
+        position: relative;
+        overflow: hidden;
+        border: 1px solid #e9ecef;
+    }
+    
+    .log-entry::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        height: 2px;
+        background: linear-gradient(90deg, transparent, rgba(0,123,255,0.3), transparent);
+        transform: translateX(-100%);
+        transition: transform 0.6s;
+    }
+    
+    .log-entry:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+        border-left-width: 4px;
+        cursor: pointer;
+    }
+    
+    .log-entry:hover::before {
+        transform: translateX(100%);
+    }
+    
+    .log-entry.error {
+        border-left-color: #dc3545;
+        background-color: #fff5f5;
+    }
+    
+    .log-entry.success {
+        border-left-color: #198754;
+        background-color: #f0fff4;
+    }
+    
+    .log-entry.warning {
+        border-left-color: #ffc107;
+        background-color: #fffcf0;
+    }
+    
+    .log-entry.info {
+        border-left-color: #0dcaf0;
+        background-color: #f0fcff;
+    }
+    
+    .log-timestamp {
+        font-size: 0.85rem;
+        color: #6c757d;
+        font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    }
+    
+    .log-product {
+        font-weight: 500;
+        color: #6c757d;
+        font-size: 0.9rem;
+    }
+    
+    .log-level-badge {
+        font-size: 0.75rem;
+        font-weight: 600;
+        padding: 0.25rem 0.5rem;
+        border-radius: 4px;
+    }
+    
+    .log-message {
+        color: #212529;
+        line-height: 1.5;
+    }
+    
+    .log-details {
+        color: #6c757d;
+        font-size: 0.85rem;
+    }
+    
+    .log-meta {
+        background-color: rgba(0,0,0,0.02);
+        border-radius: 4px;
+        padding: 8px 12px;
+    }
+    
+    .log-timestamp-detail {
+        text-align: center;
+        padding: 12px;
+        background-color: rgba(0,123,255,0.05);
+        border-radius: 8px;
+        border: 1px solid rgba(0,123,255,0.1);
+    }
+    
+    .log-actions {
+        display: flex;
+        justify-content: center;
+        gap: 4px;
+    }
+    
+    .log-actions .btn {
+        width: 36px;
+        height: 36px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+    .log-container {
+        background-color: #f8f9fa;
+        border-radius: 0 0 8px 8px;
+    }
+
+    .log-container::-webkit-scrollbar {
+        width: 8px;
+    }
+
+    .log-container::-webkit-scrollbar-track {
+        background: #f1f1f1;
+        border-radius: 4px;
+    }
+
+    .log-container::-webkit-scrollbar-thumb {
+        background: #c1c1c1;
+        border-radius: 4px;
+    }
+
+    .log-container::-webkit-scrollbar-thumb:hover {
+        background: #a8a8a8;
+    }
+    
+    .log-details {
+        margin-top: 8px;
+        font-size: 0.9em;
+    }
+    
+    .filter-section {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        padding: 25px;
+        border-radius: 15px;
+        margin-bottom: 25px;
+        color: white;
+        box-shadow: 0 8px 32px rgba(0,0,0,0.1);
+    }
+    
+    .filter-section .form-control,
+    .filter-section .form-select {
+        background-color: rgba(255,255,255,0.9);
+        border: none;
+        border-radius: 8px;
+    }
+    
+    .stats-card {
+        transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+        border-radius: 16px;
+        border: none;
+        overflow: hidden;
+        position: relative;
+        background: linear-gradient(145deg, #ffffff 0%, #f8f9fa 100%);
+    }
+    
+    .stats-card::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: linear-gradient(45deg, transparent 30%, rgba(255,255,255,0.3) 50%, transparent 70%);
+        transform: translateX(-100%);
+        transition: transform 0.8s;
+    }
+    
+    .stats-card:hover {
+        transform: translateY(-10px) scale(1.03);
+        box-shadow: 0 25px 50px rgba(0,0,0,0.15);
+    }
+    
+    .stats-card:hover::before {
+        transform: translateX(100%);
+    }
+    
+    .stats-card .card-body {
+        position: relative;
+        z-index: 1;
+        padding: 2rem 1.5rem;
+    }
+    
+    .stats-card .display-6 {
+        font-size: 3rem !important;
+        font-weight: 800 !important;
+        text-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        transition: all 0.4s ease;
+        line-height: 1;
+    }
+    
+    .stats-card:hover .display-6 {
+        transform: scale(1.15);
+    }
+    
+    .stats-card .progress {
+        background-color: rgba(0,0,0,0.05);
+        border-radius: 10px;
+        overflow: hidden;
+        box-shadow: inset 0 1px 3px rgba(0,0,0,0.1);
+    }
+    
+    .stats-card .progress-bar {
+        transition: width 2s ease-in-out;
+        border-radius: 10px;
+        position: relative;
+    }
+    
+    .stats-card .progress-bar::after {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: linear-gradient(90deg, transparent, rgba(255,255,255,0.4), transparent);
+        animation: shimmer 2s infinite;
+    }
+    
+    @keyframes shimmer {
+        0% { transform: translateX(-100%); }
+        100% { transform: translateX(100%); }
+    }
+    
+    .log-container {
+        max-height: 700px;
+        overflow-y: auto;
+        background: linear-gradient(145deg, #f8f9fa 0%, #e9ecef 100%);
+        padding: 1.5rem;
+        border-radius: 0 0 12px 12px;
+    }
+    
+    .log-container::-webkit-scrollbar {
+        width: 8px;
+    }
+    
+    .log-container::-webkit-scrollbar-track {
+        background: rgba(0,0,0,0.1);
+        border-radius: 4px;
+    }
+    
+    .log-container::-webkit-scrollbar-thumb {
+        background: rgba(0,0,0,0.3);
+        border-radius: 4px;
+    }
+    
+    .log-container::-webkit-scrollbar-thumb:hover {
+        background: rgba(0,0,0,0.5);
+    }
+    
+    .log-level-badge {
+        font-size: 0.85em;
+        padding: 0.5rem 0.75rem;
+        border-radius: 20px;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        border: 2px solid transparent;
+        transition: all 0.3s ease;
+    }
+    
+    .log-level-badge:hover {
+        transform: scale(1.05);
+        border-color: currentColor;
+    }
+    
+    .empty-logs {
+        text-align: center;
+        padding: 60px 20px;
+        color: #6c757d;
+        animation: fadeIn 0.8s ease-in-out;
+    }
+    
+    .empty-logs i {
+        font-size: 4rem;
+        margin-bottom: 20px;
+        animation: pulse 2s infinite;
+    }
+    
+    @keyframes fadeIn {
+        from {
+            opacity: 0;
+            transform: translateY(30px);
+        }
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
+    
+    @keyframes pulse {
+        0%, 100% {
+            transform: scale(1);
+        }
+        50% {
+            transform: scale(1.1);
+        }
+    }
+    
+    @keyframes slideInUp {
+        from {
+            opacity: 0;
+            transform: translateY(20px);
+        }
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
+    
+    .log-entry {
+        animation: slideInUp 0.4s ease-out;
+        transition: all 0.3s ease;
+    }
+    
+    .log-entry:hover {
+        transform: translateX(5px);
+        box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+    }
+    
+    .btn {
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+    
+    .btn:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 8px 25px rgba(0,0,0,0.15);
+    }
+    
+    .form-control, .form-select {
+        transition: all 0.3s ease;
+    }
+    
+    .form-control:focus, .form-select:focus {
+        transform: translateY(-2px);
+        box-shadow: 0 8px 25px rgba(0,123,255,0.15);
+    }
+    
+    .bg-gradient-primary {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%) !important;
+    }
+    
+    .log-header-card {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        border: none;
+        color: white;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-xxl">
+    <div class="row">
+        <div class="col-12">
+            <!-- 页面标题 -->
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <div>
+                    <h2 class="mb-1">📊 监控日志管理</h2>
+                    <p class="text-muted mb-0">实时监控系统运行状态和商品库存变化</p>
+                </div>
+                <div class="d-flex gap-2">
+                    <button class="btn btn-success" onclick="refreshLogs()" title="刷新数据">
+                        <i class="fas fa-sync-alt me-1"></i> 刷新
+                    </button>
+                    <button class="btn btn-info" onclick="exportLogs()" title="导出日志">
+                        <i class="fas fa-download me-1"></i> 导出
+                    </button>
+                </div>
+            </div>
+            
+            <!-- 过滤器部分 -->
+            <div class="card mb-4 border-0 shadow-sm">
+    <div class="card-header bg-white border-bottom">
+        <h5 class="mb-0 text-dark">
+            <i class="fas fa-filter me-2 text-primary"></i>
+            日志过滤器
+        </h5>
+    </div>
+    <div class="card-body" style="background-color: #f8f9fa;">
+        <div class="row g-3">
+            <div class="col-lg-3 col-md-6">
+                <label for="logLevel" class="form-label fw-semibold" style="color: #2c3e50;">
+                    <i class="fas fa-layer-group me-1 text-primary"></i>日志级别
+                </label>
+                <select class="form-select form-select-sm" id="logLevel" style="background-color: #ffffff; color: #2c3e50; border: 2px solid #e3e6ea;">
+                    <option value="">🔍 所有级别</option>
+                    <option value="info">ℹ️ 信息</option>
+                    <option value="success">✅ 成功</option>
+                    <option value="warning">⚠️ 警告</option>
+                    <option value="error">❌ 错误</option>
+                </select>
+            </div>
+            <div class="col-lg-3 col-md-6">
+                <label for="productFilter" class="form-label fw-semibold" style="color: #2c3e50;">
+                    <i class="fas fa-box me-1 text-success"></i>商品筛选
+                </label>
+                <select class="form-select form-select-sm" id="productFilter" style="background-color: #ffffff; color: #2c3e50; border: 2px solid #e3e6ea;">
+                    <option value="">📦 所有商品</option>
+                </select>
+            </div>
+            <div class="col-lg-3 col-md-6">
+                <label for="dateFilter" class="form-label fw-semibold" style="color: #2c3e50;">
+                    <i class="fas fa-calendar-alt me-1 text-info"></i>日期范围
+                </label>
+                <input type="date" class="form-control form-control-sm" id="dateFilter" style="background-color: #ffffff; color: #2c3e50; border: 2px solid #e3e6ea;">
+            </div>
+            <div class="col-lg-3 col-md-6 d-flex align-items-end">
+                <div class="d-grid gap-2 w-100">
+                    <div class="btn-group" role="group">
+                        <button class="btn btn-primary" onclick="filterLogs()" title="应用过滤条件" style="color: white; background-color: #007bff; border-color: #007bff;">
+                            <i class="fas fa-search me-1"></i> 过滤
+                        </button>
+                        <button class="btn btn-outline-secondary" onclick="clearFilters()" title="清除所有过滤器" style="color: #6c757d; border-color: #6c757d;">
+                            <i class="fas fa-eraser me-1"></i> 清除
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+            <!-- 日志统计卡片 -->
+            <div class="mb-4">
+                <h5 class="mb-3">
+                    <i class="fas fa-chart-bar me-2 text-primary"></i>
+                    统计概览
+                </h5>
+                <div class="row g-4">
+    <div class="col-xl-3 col-lg-6 col-md-6">
+        <div class="card stats-card info border-0 shadow h-100">
+            <div class="card-body text-center py-4">
+                <div class="mb-3">
+                    <div class="rounded-circle bg-info bg-opacity-15 d-inline-flex align-items-center justify-content-center" style="width: 40px; height: 40px;">
+                        <i class="fas fa-list-alt text-info" style="font-size: 1rem;"></i>
+                    </div>
+                </div>
+                <h1 class="mb-2 fw-bold text-primary display-6" id="totalLogs">0</h1>
+                <p class="mb-2 text-muted fw-semibold">总日志数</p>
+                <div class="progress mt-3" style="height: 6px;">
+                    <div class="progress-bar bg-info" role="progressbar" style="width: 100%"></div>
+                </div>
+                <small class="text-muted mt-2 d-block">
+                    <i class="fas fa-clock me-1"></i>实时统计
+                </small>
+            </div>
+        </div>
+    </div>
+    <div class="col-xl-3 col-lg-6 col-md-6">
+        <div class="card stats-card success border-0 shadow h-100">
+            <div class="card-body text-center py-4">
+                <div class="mb-3">
+                    <div class="rounded-circle bg-success bg-opacity-15 d-inline-flex align-items-center justify-content-center" style="width: 40px; height: 40px;">
+                        <i class="fas fa-check-circle text-success" style="font-size: 1rem;"></i>
+                    </div>
+                </div>
+                <h1 class="mb-2 fw-bold text-success display-6" id="successLogs">0</h1>
+                <p class="mb-2 text-muted fw-semibold">成功操作</p>
+                <div class="progress mt-3" style="height: 6px;">
+                    <div class="progress-bar bg-success" role="progressbar" style="width: 80%"></div>
+                </div>
+                <small class="text-muted mt-2 d-block">
+                    <i class="fas fa-arrow-up me-1"></i>运行正常
+                </small>
+            </div>
+        </div>
+    </div>
+    <div class="col-xl-3 col-lg-6 col-md-6">
+        <div class="card stats-card warning border-0 shadow h-100">
+            <div class="card-body text-center py-4">
+                <div class="mb-3">
+                    <div class="rounded-circle bg-warning bg-opacity-15 d-inline-flex align-items-center justify-content-center" style="width: 40px; height: 40px;">
+                        <i class="fas fa-exclamation-triangle text-warning" style="font-size: 1rem;"></i>
+                    </div>
+                </div>
+                <h1 class="mb-2 fw-bold text-warning display-6" id="warningLogs">0</h1>
+                <p class="mb-2 text-muted fw-semibold">需要关注</p>
+                <div class="progress mt-3" style="height: 6px;">
+                    <div class="progress-bar bg-warning" role="progressbar" style="width: 30%"></div>
+                </div>
+                <small class="text-muted mt-2 d-block">
+                    <i class="fas fa-eye me-1"></i>监控中
+                </small>
+            </div>
+        </div>
+    </div>
+    <div class="col-xl-3 col-lg-6 col-md-6">
+        <div class="card stats-card danger border-0 shadow h-100">
+            <div class="card-body text-center py-4">
+                <div class="mb-3">
+                    <div class="rounded-circle bg-danger bg-opacity-15 d-inline-flex align-items-center justify-content-center" style="width: 40px; height: 40px;">
+                        <i class="fas fa-times-circle text-danger" style="font-size: 1rem;"></i>
+                    </div>
+                </div>
+                <h1 class="mb-2 fw-bold text-danger display-6" id="errorLogs">0</h1>
+                <p class="mb-2 text-muted fw-semibold">紧急处理</p>
+                <div class="progress mt-3" style="height: 6px;">
+                    <div class="progress-bar bg-danger" role="progressbar" style="width: 10%"></div>
+                </div>
+                <small class="text-muted mt-2 d-block">
+                    <i class="fas fa-exclamation-circle me-1"></i>需要注意
+                </small>
+            </div>
+        </div>
+    </div>
+                </div>
+            </div>
+
+        <!-- 监控日志详情 -->
+            <div class="card border-0 shadow-lg">
+    <div class="card-header bg-white border-bottom py-3">
+        <div class="d-flex align-items-center justify-content-between">
+            <div>
+                <h5 class="mb-1 fw-bold text-dark">
+                    <i class="fas fa-clipboard-list me-2 text-primary"></i>
+                    📋 监控日志列表
+                    <span class="badge bg-primary ms-2" id="logCount">0</span>
+                </h5>
+                <small class="text-muted">点击日志条目可查看详细信息 | 显示最近2000条记录</small>
+            </div>
+            <div class="d-flex gap-2">
+                <button class="btn btn-outline-primary btn-sm" onclick="refreshLogs()" title="刷新日志">
+                    <i class="fas fa-sync me-1"></i>刷新
+                </button>
+                <button class="btn btn-outline-secondary btn-sm" onclick="exportLogs()" title="导出日志">
+                    <i class="fas fa-download me-1"></i>导出
+                </button>
+                <div class="dropdown">
+                    <button class="btn btn-outline-danger btn-sm dropdown-toggle" type="button" id="clearLogsDropdown" data-bs-toggle="dropdown" aria-expanded="false" title="清空操作">
+                        <i class="fas fa-trash me-1"></i>清空
+                    </button>
+                    <ul class="dropdown-menu" aria-labelledby="clearLogsDropdown">
+                        <li>
+                            <a class="dropdown-item text-danger" href="#" onclick="clearAllLogsWithConfirm()">
+                                <i class="fas fa-trash me-2"></i>清空所有日志
+                            </a>
+                        </li>
+                        <li><hr class="dropdown-divider"></li>
+                        <li>
+                            <span class="dropdown-item-text small text-muted">
+                                <i class="fas fa-warning me-1"></i>此操作不可撤销
+                            </span>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="card-body p-0">
+        <div class="log-container" id="logsContainer" style="max-height: 600px; overflow-y: auto;">
+            <div class="text-center py-5">
+                <div class="spinner-border text-primary mb-3" role="status">
+                    <span class="visually-hidden">Loading...</span>
+                </div>
+                <h5 class="text-muted">🔄 正在加载日志数据</h5>
+                <p class="text-muted mb-0">请稍候片刻...</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+</div>
+<!-- /container-xxl -->
+{% endblock %}
+
+{% block modals %}
+<!-- 确认删除模态框 -->
+<div class="modal fade" id="confirmModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">
+                    <i class="fas fa-exclamation-triangle text-warning me-2"></i>
+                    确认操作
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="alert alert-warning">
+                    <i class="fas fa-warning me-2"></i>
+                    确定要清除所有日志记录吗？此操作无法撤销。
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                    <i class="fas fa-times me-1"></i> 取消
+                </button>
+                <button type="button" class="btn btn-danger" onclick="confirmClearLogs()">
+                    <i class="fas fa-trash me-1"></i> 确认清除
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+let currentLogs = [];
+let filteredLogs = [];
+
+// 页面加载时初始化
+document.addEventListener('DOMContentLoaded', function() {
+    loadProducts();
+    loadLogs();
+});
+
+// 加载商品列表到过滤器
+function loadProducts() {
+    fetch('/api/products')
+        .then(response => response.json())
+        .then(products => {
+            const productFilter = document.getElementById('productFilter');
+            productFilter.innerHTML = '<option value="">所有商品</option>';
+            
+            products.forEach(product => {
+                const option = document.createElement('option');
+                option.value = product.id;
+                option.textContent = product.name;
+                productFilter.appendChild(option);
+            });
+        })
+        .catch(error => {
+            console.error('加载商品列表失败:', error);
+        });
+}
+
+// 加载日志
+function loadLogs() {
+    console.log('开始加载日志...');
+    
+    fetch('/api/monitoring_logs')
+        .then(response => {
+            console.log('API响应状态:', response.status);
+            if (!response.ok) {
+                throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+            }
+            return response.json();
+        })
+        .then(data => {
+            console.log('API返回数据:', data);
+            if (data.success) {
+                currentLogs = data.logs || [];
+                filteredLogs = [...currentLogs];
+                console.log(`成功加载 ${currentLogs.length} 条日志`);
+                updateLogCount();
+                displayLogs();
+                updateStatistics();
+            } else {
+                console.error('API返回错误:', data.message);
+                showError('加载日志失败: ' + (data.message || '未知错误'));
+            }
+        })
+        .catch(error => {
+            console.error('加载日志失败:', error);
+            showError('网络错误: ' + error.message);
+            // 显示错误状态
+            const container = document.getElementById('logsContainer');
+            if (container) {
+                container.innerHTML = `
+                    <div class="empty-logs">
+                        <i class="fas fa-exclamation-triangle text-danger"></i>
+                        <h5>加载失败</h5>
+                        <p class="text-muted">无法加载日志数据，请检查网络连接</p>
+                        <button class="btn btn-primary btn-sm" onclick="loadLogs()">
+                            <i class="fas fa-sync me-1"></i> 重试
+                        </button>
+                    </div>
+                `;
+            }
+        });
+}
+
+// 显示日志
+function displayLogs() {
+    const container = document.getElementById('logsContainer');
+    if (!container) {
+        console.error('找不到日志容器元素');
+        return;
+    }
+    
+    if (!filteredLogs || filteredLogs.length === 0) {
+        container.innerHTML = `
+            <div class="card border-0 shadow-sm">
+                <div class="card-body text-center py-5">
+                    <div class="mb-4">
+                        <i class="fas fa-clipboard-list text-muted opacity-50" style="font-size: 3rem;"></i>
+                    </div>
+                    <h6 class="text-muted mb-3">暂无日志记录</h6>
+                    <p class="text-muted small mb-4">系统监控正在运行中，日志将在这里显示</p>
+                    <div class="d-flex justify-content-center gap-2">
+                        <button class="btn btn-primary btn-sm" onclick="refreshLogs()">
+                            <i class="fas fa-sync me-1"></i>刷新
+                        </button>
+                        <button class="btn btn-outline-secondary btn-sm" onclick="window.location.href='/products'">
+                            <i class="fas fa-plus me-1"></i>添加商品
+                        </button>
+                    </div>
+                </div>
+            </div>
+        `;
+        return;
+    }
+
+    let html = '';
+    filteredLogs.forEach(log => {
+        const levelClass = getLevelClass(log.level);
+        const icon = getLevelIcon(log.level);
+        const badge = getLevelBadge(log.level);
+        
+        html += `
+            <div class="log-entry ${levelClass}" onclick="showLogDetails('${log.id}')">
+                <div class="row g-3">
+                    <div class="col-md-8">
+                        <!-- 日志头部信息 -->
+                        <div class="d-flex align-items-center flex-wrap gap-2 mb-2">
+                            <span class="log-level-badge badge ${badge}">
+                                <i class="${icon} me-1"></i>${log.level.toUpperCase()}
+                            </span>
+                            <span class="badge bg-light text-dark border">
+                                <i class="fas fa-cube me-1"></i>${log.product_name || '系统'}
+                            </span>
+                            <span class="badge bg-secondary">
+                                ID: ${log.id.split('_')[1]}
+                            </span>
+                            <small class="text-muted">
+                                <i class="fas fa-clock me-1"></i>${formatDateTime(log.timestamp)}
+                            </small>
+                        </div>
+                        
+                        <!-- 主要消息 -->
+                        <div class="log-message mb-2">
+                            <strong>${log.message}</strong>
+                        </div>
+                        
+                        <!-- 详细信息 -->
+                        ${log.details ? `
+                            <div class="log-details">
+                                <small class="text-muted d-block">
+                                    <i class="fas fa-info-circle me-1"></i>${log.details}
+                                </small>
+                            </div>
+                        ` : ''}
+                        
+                        <!-- 额外信息行 -->
+                        <div class="log-meta mt-2 pt-2 border-top">
+                            <div class="row text-muted small">
+                                <div class="col-sm-6">
+                                    <i class="fas fa-database me-1"></i>
+                                    类型: ${log.id.startsWith('stock_') ? '库存监控' : '通知记录'}
+                                </div>
+                                <div class="col-sm-6">
+                                    <i class="fas fa-barcode me-1"></i>
+                                    产品ID: ${log.product_id || 'N/A'}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="col-md-4 text-md-end">
+                        <!-- 时间戳详情 -->
+                        <div class="log-timestamp-detail">
+                            <div class="text-muted small mb-1">记录时间</div>
+                            <div class="fw-medium text-primary">
+                                ${formatDateTime(log.timestamp).split(' ')[1]}
+                            </div>
+                            <div class="text-muted small">
+                                ${formatDateTime(log.timestamp).split(' ')[0]}
+                            </div>
+                        </div>
+                        
+                        <!-- 快速操作按钮 -->
+                        <div class="log-actions mt-3">
+                            <button class="btn btn-outline-primary btn-sm me-1" onclick="event.stopPropagation(); viewProductDetails(${log.product_id})" title="查看商品详情">
+                                <i class="fas fa-eye"></i>
+                            </button>
+                            <button class="btn btn-outline-secondary btn-sm" onclick="event.stopPropagation(); copyLogInfo('${log.id}')" title="复制日志信息">
+                                <i class="fas fa-copy"></i>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `;
+    });
+    
+    container.innerHTML = html;
+    updateLogCount();  // 更新日志计数显示
+}
+
+// 获取级别样式类
+function getLevelClass(level) {
+    const classes = {
+        'info': 'info',
+        'success': 'success', 
+        'warning': 'warning',
+        'error': 'error'
+    };
+    return classes[level] || 'info';
+}
+
+// 获取级别图标
+function getLevelIcon(level) {
+    const icons = {
+        'info': 'fas fa-info-circle',
+        'success': 'fas fa-check-circle',
+        'warning': 'fas fa-exclamation-triangle',
+        'error': 'fas fa-times-circle'
+    };
+    return icons[level] || 'fas fa-info-circle';
+}
+
+// 获取级别徽章样式
+function getLevelBadge(level) {
+    const badges = {
+        'info': 'bg-info',
+        'success': 'bg-success',
+        'warning': 'bg-warning text-dark',
+        'error': 'bg-danger'
+    };
+    return badges[level] || 'bg-info';
+}
+
+// 格式化日期时间
+function formatDateTime(timestamp) {
+    const date = new Date(timestamp);
+    return date.toLocaleString('zh-CN', {
+        timeZone: 'Asia/Shanghai',
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit',
+        hour: '2-digit',
+        minute: '2-digit',
+        second: '2-digit'
+    });
+}
+
+// 过滤日志
+function filterLogs() {
+    if (!currentLogs) {
+        console.warn('当前日志数据为空');
+        return;
+    }
+    
+    const levelFilter = document.getElementById('logLevel').value;
+    const productFilter = document.getElementById('productFilter').value;
+    const dateFilter = document.getElementById('dateFilter').value;
+
+    filteredLogs = currentLogs.filter(log => {
+        // 级别过滤
+        if (levelFilter && log.level !== levelFilter) {
+            return false;
+        }
+        
+        // 商品过滤
+        if (productFilter && log.product_id != productFilter) {
+            return false;
+        }
+        
+        // 日期过滤
+        if (dateFilter) {
+            const logDate = new Date(log.timestamp).toISOString().split('T')[0];
+            if (logDate !== dateFilter) {
+                return false;
+            }
+        }
+        
+        return true;
+    });
+
+    displayLogs();
+    updateStatistics();
+    
+    // 安全地调用Swal
+    if (typeof Swal !== 'undefined') {
+        Swal.fire({
+            toast: true,
+            position: 'top-end',
+            showConfirmButton: false,
+            timer: 3000,
+            icon: 'success',
+            title: `🔍 已过滤出 ${filteredLogs.length} 条日志`,
+            background: '#f8f9fa',
+            iconColor: '#28a745',
+            customClass: {
+                popup: 'animate__animated animate__fadeInRight'
+            }
+        });
+    }
+}
+
+// 清除过滤器
+function clearFilters() {
+    document.getElementById('logLevel').value = '';
+    document.getElementById('productFilter').value = '';
+    document.getElementById('dateFilter').value = '';
+    
+    filteredLogs = [...currentLogs];
+    displayLogs();
+    updateStatistics();
+    
+    if (typeof Swal !== 'undefined') {
+        Swal.fire({
+            toast: true,
+            position: 'top-end',
+            showConfirmButton: false,
+            timer: 2500,
+            icon: 'info',
+            title: '🧹 已清除所有过滤器',
+            background: '#e3f2fd',
+            iconColor: '#2196f3',
+            customClass: {
+                popup: 'animate__animated animate__fadeInRight'
+            }
+        });
+    }
+}
+
+// 更新日志计数
+function updateLogCount() {
+    const logCountBadge = document.getElementById('logCount');
+    if (logCountBadge && currentLogs) {
+        const count = currentLogs.length;
+        logCountBadge.textContent = count;
+        
+        // 根据日志数量更新徽章颜色
+        logCountBadge.className = 'badge ms-2';
+        if (count === 0) {
+            logCountBadge.classList.add('bg-secondary');
+        } else if (count < 100) {
+            logCountBadge.classList.add('bg-success');
+        } else if (count < 500) {
+            logCountBadge.classList.add('bg-warning');
+        } else {
+            logCountBadge.classList.add('bg-primary');
+        }
+    }
+}
+
+// 刷新日志
+function refreshLogs() {
+    if (typeof Swal !== 'undefined') {
+        Swal.fire({
+            title: '🔄 正在刷新',
+            html: '正在重新加载日志数据...<br><small class="text-muted">请稍候</small>',
+            allowOutsideClick: false,
+            showConfirmButton: false,
+            background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+            color: 'white',
+            willOpen: () => {
+                Swal.showLoading();
+            }
+        });
+    }
+    
+    loadLogs();
+    
+    setTimeout(() => {
+        if (typeof Swal !== 'undefined') {
+            Swal.close();
+            Swal.fire({
+                toast: true,
+                position: 'top-end',
+                showConfirmButton: false,
+                timer: 3000,
+                icon: 'success',
+                title: '✨ 日志数据已刷新',
+                background: '#d4edda',
+                iconColor: '#28a745',
+                customClass: {
+                    popup: 'animate__animated animate__fadeInRight'
+                }
+            });
+        }
+    }, 1200);
+}
+
+// 导出日志
+function exportLogs() {
+    if (filteredLogs.length === 0) {
+        Swal.fire('提示', '没有可导出的日志数据', 'info');
+        return;
+    }
+
+    Swal.fire({
+        title: '导出日志',
+        text: `准备导出 ${filteredLogs.length} 条日志记录`,
+        icon: 'question',
+        showCancelButton: true,
+        confirmButtonText: '导出',
+        cancelButtonText: '取消'
+    }).then((result) => {
+        if (result.isConfirmed) {
+            // 创建CSV内容
+            const headers = ['时间', '级别', '商品', '消息', '详情'];
+            const csvContent = [
+                headers.join(','),
+                ...filteredLogs.map(log => [
+                    formatDateTime(log.timestamp),
+                    log.level,
+                    log.product_name || '系统',
+                    `"${log.message.replace(/"/g, '""')}"`,
+                    `"${(log.details || '').replace(/"/g, '""')}"`
+                ].join(','))
+            ].join('\n');
+
+            // 下载文件
+            const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+            const link = document.createElement('a');
+            link.href = URL.createObjectURL(blob);
+            const now = new Date();
+            const dateStr = now.toISOString().split('T')[0];
+            link.download = `监控日志_${dateStr}.csv`;
+            link.click();
+            
+            Swal.fire('成功', '日志已导出', 'success');
+        }
+    });
+}
+
+// 更新统计信息
+function updateStatistics() {
+    if (!filteredLogs) {
+        filteredLogs = [];
+    }
+    
+    const total = filteredLogs.length;
+    const success = filteredLogs.filter(log => log.level === 'success').length;
+    const warning = filteredLogs.filter(log => log.level === 'warning').length;
+    const error = filteredLogs.filter(log => log.level === 'error').length;
+
+    // 带动画效果的数字更新
+    safeAnimateNumber('totalLogs', total);
+    safeAnimateNumber('successLogs', success);
+    safeAnimateNumber('warningLogs', warning);
+    safeAnimateNumber('errorLogs', error);
+}
+
+// 数字动画效果
+function safeAnimateNumber(elementId, targetValue) {
+    const element = document.getElementById(elementId);
+    if (!element) {
+        console.warn(`找不到元素: ${elementId}`);
+        return;
+    }
+    
+    const currentValue = parseInt(element.textContent) || 0;
+    if (currentValue === targetValue) {
+        return; // 值没有变化，不需要动画
+    }
+    
+    const increment = (targetValue - currentValue) / 10;
+    let current = currentValue;
+    
+    const timer = setInterval(() => {
+        current += increment;
+        if ((increment > 0 && current >= targetValue) || (increment < 0 && current <= targetValue)) {
+            current = targetValue;
+            clearInterval(timer);
+        }
+        element.textContent = Math.round(current);
+    }, 50);
+}
+
+// 清除所有日志
+function clearAllLogs() {
+    Swal.fire({
+        title: '确认清除',
+        text: '确定要清除所有日志记录吗？此操作无法撤销！',
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonColor: '#d33',
+        cancelButtonColor: '#3085d6',
+        confirmButtonText: '确认清除',
+        cancelButtonText: '取消'
+    }).then((result) => {
+        if (result.isConfirmed) {
+            confirmClearLogs();
+        }
+    });
+}
+
+// 清空所有日志（带确认对话框）
+function clearAllLogsWithConfirm() {
+    Swal.fire({
+        title: '确认清空日志?',
+        text: '此操作将删除所有日志记录，且无法恢复！',
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonColor: '#dc3545',
+        cancelButtonColor: '#6c757d',
+        confirmButtonText: '<i class="fas fa-trash me-1"></i>确认清空',
+        cancelButtonText: '<i class="fas fa-times me-1"></i>取消',
+        reverseButtons: true
+    }).then((result) => {
+        if (result.isConfirmed) {
+            confirmClearLogs();
+        }
+    });
+}
+
+// 确认清除日志
+function confirmClearLogs() {
+    Swal.fire({
+        title: '清除中...',
+        text: '正在清除所有日志记录',
+        allowOutsideClick: false,
+        showConfirmButton: false,
+        willOpen: () => {
+            Swal.showLoading();
+        }
+    });
+    
+    fetch('/api/clear_logs', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json'
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            Swal.fire('成功', '所有日志已清除', 'success');
+            loadLogs();
+        } else {
+            Swal.fire('错误', '清除日志失败: ' + data.message, 'error');
+        }
+    })
+    .catch(error => {
+        Swal.fire('错误', '网络错误: ' + error.message, 'error');
+    });
+}
+
+// 显示日志详情
+function showLogDetails(logId) {
+    const log = currentLogs.find(l => l.id == logId);
+    if (!log) return;
+    
+    const levelClass = getLevelClass(log.level);
+    const icon = getLevelIcon(log.level);
+    
+    if (typeof Swal !== 'undefined') {
+        Swal.fire({
+            title: `<i class="${icon} me-2"></i>${log.level.toUpperCase()} 日志详情`,
+            html: `
+                <div class="text-start">
+                    <p><strong>产品：</strong> ${log.product_name || '系统'}</p>
+                    <p><strong>时间：</strong> ${formatDateTime(log.timestamp)}</p>
+                    <p><strong>消息：</strong> ${log.message}</p>
+                    ${log.details ? `<p><strong>详情：</strong> ${log.details}</p>` : ''}
+                </div>
+            `,
+            confirmButtonText: '关闭',
+            customClass: {
+                container: 'log-details-modal'
+            }
+        });
+    }
+}
+
+// 查看商品详情
+function viewProductDetails(productId) {
+    if (!productId || productId === 'N/A') {
+        Swal.fire('提示', '该日志没有关联的商品信息', 'info');
+        return;
+    }
+    
+    // 跳转到商品详情页面
+    window.open(`/products?highlight=${productId}`, '_blank');
+}
+
+// 复制日志信息
+function copyLogInfo(logId) {
+    const log = currentLogs.find(l => l.id === logId);
+    if (!log) return;
+    
+    const logInfo = `
+日志ID: ${log.id}
+产品: ${log.product_name || '系统'}
+级别: ${log.level.toUpperCase()}
+消息: ${log.message}
+详情: ${log.details || '无'}
+时间: ${formatDateTime(log.timestamp)}
+类型: ${log.id.startsWith('stock_') ? '库存监控' : '通知记录'}
+`.trim();
+    
+    navigator.clipboard.writeText(logInfo).then(() => {
+        // 使用Toast提示
+        const toast = document.createElement('div');
+        toast.className = 'toast align-items-center text-white bg-success border-0 position-fixed';
+        toast.style.cssText = 'top: 20px; right: 20px; z-index: 9999;';
+        toast.innerHTML = `
+            <div class="d-flex">
+                <div class="toast-body">
+                    <i class="fas fa-check me-2"></i>日志信息已复制到剪贴板
+                </div>
+                <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
+            </div>
+        `;
+        document.body.appendChild(toast);
+        
+        const bsToast = new bootstrap.Toast(toast);
+        bsToast.show();
+        
+        // 3秒后自动移除
+        setTimeout(() => {
+            if (document.body.contains(toast)) {
+                document.body.removeChild(toast);
+            }
+        }, 3000);
+    }).catch(() => {
+        Swal.fire('错误', '复制失败，请手动复制', 'error');
+    });
+}
+
+// 显示错误消息
+function showError(message) {
+    console.error('错误:', message);
+    
+    // 检查SweetAlert2是否可用
+    if (typeof Swal !== 'undefined') {
+        Swal.fire('错误', message, 'error');
+    } else {
+        // 降级到原生alert
+        alert('错误: ' + message);
+    }
+}
+
+// 自动刷新日志 (每30秒)
+setInterval(() => {
+    loadLogs();
+}, 30000);
+</script>
+{% endblock %}

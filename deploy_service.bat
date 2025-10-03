@@ -1,0 +1,3 @@
+@echo off
+echo 部署Windows服务...
+scripts\windows\deploy_windows_service.bat

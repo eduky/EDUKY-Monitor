@@ -1,0 +1,634 @@
+{% extends "base.html" %}
+
+{% block title %}仪表板 - EDUKY-商品监控系统{% endblock %}
+
+{% block content %}
+<!-- 统计卡片 -->
+<div class="row mb-4">
+    <div class="col-lg-3 col-md-6 mb-4">
+        <div class="card border-primary">
+            <div class="card-body">
+                <div class="d-flex justify-content-between">
+                    <div>
+                        <h6 class="card-title text-muted">监控商品</h6>
+                        <h3 class="text-primary">{{ products|length }}</h3>
+                    </div>
+                    <div class="align-self-center">
+                        <i class="fas fa-box fa-2x text-primary"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-lg-3 col-md-6 mb-4">
+        <div class="card border-success">
+            <div class="card-body">
+                <div class="d-flex justify-content-between">
+                    <div>
+                        <h6 class="card-title text-muted">有库存商品</h6>
+                        <h3 class="text-success">{{ products|selectattr('current_stock', 'greaterthan', 0)|list|length }}</h3>
+                    </div>
+                    <div class="align-self-center">
+                        <i class="fas fa-check-circle fa-2x text-success"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-lg-3 col-md-6 mb-4">
+        <div class="card border-warning">
+            <div class="card-body">
+                <div class="d-flex justify-content-between">
+                    <div>
+                        <h6 class="card-title text-muted">低库存商品</h6>
+                        <h3 class="text-warning">{{ products|selectattr('current_stock', 'lessthan', 5)|selectattr('current_stock', 'greaterthan', 0)|list|length }}</h3>
+                    </div>
+                    <div class="align-self-center">
+                        <i class="fas fa-exclamation-triangle fa-2x text-warning"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-lg-3 col-md-6 mb-4">
+        <div class="card border-danger">
+            <div class="card-body">
+                <div class="d-flex justify-content-between">
+                    <div>
+                        <h6 class="card-title text-muted">缺货商品</h6>
+                        <h3 class="text-danger">{{ products|selectattr('current_stock', 'equalto', 0)|list|length }}</h3>
+                    </div>
+                    <div class="align-self-center">
+                        <i class="fas fa-times-circle fa-2x text-danger"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 系统状态和通知状态 -->
+<div class="row mb-4">
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h6 class="mb-0">
+                    <i class="fas fa-heartbeat me-2"></i>
+                    系统状态
+                </h6>
+                <span class="badge bg-success" id="systemStatus">运行中</span>
+            </div>
+            <div class="card-body">
+                <div class="d-flex justify-content-between mb-2">
+                    <span>监控间隔:</span>
+                    <span class="text-muted" id="checkInterval">{{ config.check_interval if config and config.check_interval else 2 }}分钟</span>
+                </div>
+                <div class="d-flex justify-content-between mb-2">
+                    <span>当前时间:</span>
+                    <span class="text-info" id="currentTime" title="互联网时间 (中国)">-</span>
+                </div>
+                <div class="d-flex justify-content-between mb-2">
+                    <span>最后检查:</span>
+                    <span class="text-muted" id="lastCheckTime">-</span>
+                </div>
+                <div class="d-flex justify-content-between mb-2">
+                    <span>活跃商品:</span>
+                    <span class="badge bg-primary" id="activeProducts">{{ products|selectattr('is_active')|list|length if products else 0 }}</span>
+                </div>
+                <div class="d-flex justify-content-between">
+                    <span>有库存:</span>
+                    <span class="badge bg-success" id="inStockProducts">{{ products|selectattr('current_stock', 'greaterthan', 0)|list|length }}</span>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header">
+                <h6 class="mb-0">
+                    <i class="fas fa-bell me-2"></i>
+                    通知状态
+                </h6>
+            </div>
+            <div class="card-body">
+                {% if config %}
+                <div class="row">
+                    <div class="col-md-4">
+                        <div class="d-flex align-items-center mb-2">
+                            <span class="badge bg-{{ 'success' if config.channel_enabled else 'secondary' }} me-2">
+                                <i class="fas fa-broadcast-tower"></i>
+                            </span>
+                            <span>频道通知</span>
+                        </div>
+                        {% if config.channel_enabled and config.channel_id %}
+                            <small class="text-muted">ID: {{ config.channel_id }}</small>
+                        {% endif %}
+                    </div>
+                    
+                    <div class="col-md-4">
+                        <div class="d-flex align-items-center mb-2">
+                            <span class="badge bg-{{ 'success' if config.group_enabled else 'secondary' }} me-2">
+                                <i class="fas fa-users"></i>
+                            </span>
+                            <span>群组通知</span>
+                        </div>
+                        {% if config.group_enabled and config.group_id %}
+                            <small class="text-muted">ID: {{ config.group_id }}</small>
+                        {% endif %}
+                    </div>
+                    
+                    <div class="col-md-4">
+                        <div class="d-flex align-items-center mb-2">
+                            {% set user_enabled = config.user_enabled if config.user_enabled is defined else false %}
+                            {% set personal_enabled = config.personal_enabled if config.personal_enabled is defined else false %}
+                            {% set is_enabled = user_enabled or personal_enabled %}
+                            <span class="badge bg-{{ 'success' if is_enabled else 'secondary' }} me-2">
+                                <i class="fas fa-user"></i>
+                            </span>
+                            <span>个人通知</span>
+                        </div>
+                        {% set user_id = config.user_id if config.user_id is defined else none %}
+                        {% set personal_chat_id = config.personal_chat_id if config.personal_chat_id is defined else none %}
+                        {% if (user_enabled and user_id) or (personal_enabled and personal_chat_id) %}
+                            <small class="text-muted">ID: {{ user_id or personal_chat_id }}</small>
+                        {% endif %}
+                        <!-- 调试信息 - 生产环境请删除 -->
+                        <!-- Debug: user_enabled={{ user_enabled }}, user_id={{ user_id }}, personal_enabled={{ personal_enabled }}, personal_chat_id={{ personal_chat_id }} -->
+                    </div>
+                </div>
+                {% else %}
+                <div class="text-center text-muted">
+                    <i class="fas fa-cog fa-2x mb-2"></i>
+                    <p>尚未配置通知设置</p>
+                    <a href="{{ url_for('settings') }}" class="btn btn-primary">立即配置</a>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 商品列表 -->
+<div class="row">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h5 class="mb-0">
+                    <i class="fas fa-list me-2"></i>
+                    商品监控状态
+                </h5>
+                <div>
+                    <button class="btn btn-info btn-sm me-2" onclick="manualCheck()">
+                        <i class="fas fa-sync me-1"></i>
+                        立即检查
+                    </button>
+                    <a href="{{ url_for('add_product') }}" class="btn btn-success btn-sm">
+                        <i class="fas fa-plus me-1"></i>
+                        添加商品
+                    </a>
+                </div>
+            </div>
+            <div class="card-body">
+                {% if products %}
+                <div class="table-responsive">
+                    <table class="table table-hover">
+                        <thead class="table-light">
+                            <tr>
+                                <th>商品名称</th>
+                                <th>当前库存</th>
+                                <th>库存状态</th>
+                                <th>阈值</th>
+                                <th>最后更新</th>
+                                <th>状态</th>
+                                <th>操作</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for product in products %}
+                            <tr>
+                                <td>
+                                    <div class="d-flex align-items-center">
+                                        <div>
+                                            <strong>{{ product.name }}</strong>
+                                            <br>
+                                            <small class="text-muted">
+                                                <a href="{{ product.url }}" target="_blank" class="text-decoration-none">
+                                                    <i class="fas fa-external-link-alt"></i>
+                                                    查看商品
+                                                </a>
+                                            </small>
+                                        </div>
+                                    </div>
+                                </td>
+                                <td data-product-stock="{{ product.id }}" data-current-stock="{{ product.current_stock }}">
+                                    <span class="fw-bold fs-5">{{ product.current_stock }}</span>
+                                    {% if product.last_stock != product.current_stock %}
+                                        {% if product.current_stock > product.last_stock %}
+                                            <small class="text-success stock-change">
+                                                <br><i class="fas fa-arrow-up"></i>
+                                                +{{ product.current_stock - product.last_stock }}
+                                            </small>
+                                        {% else %}
+                                            <small class="text-danger stock-change">
+                                                <br><i class="fas fa-arrow-down"></i>
+                                                -{{ product.last_stock - product.current_stock }}
+                                            </small>
+                                        {% endif %}
+                                    {% endif %}
+                                </td>
+                                <td data-product-status="{{ product.id }}">
+                                    {% if product.current_stock == 0 %}
+                                        <span class="stock-status stock-out">缺货</span>
+                                    {% elif product.current_stock < 5 %}
+                                        <span class="stock-status stock-low">库存紧张</span>
+                                    {% else %}
+                                        <span class="stock-status stock-in">库存充足</span>
+                                    {% endif %}
+                                </td>
+                                <td>{{ product.threshold }}</td>
+                                <td data-product-time="{{ product.id }}">
+                                    {% if product.updated_at %}
+                                        <span title="{{ product.updated_at|china_time }}">
+                                            {{ product.updated_at|china_time_short }}
+                                        </span>
+                                    {% else %}
+                                        <span class="text-muted">从未更新</span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    <span class="badge bg-{{ 'success' if product.is_active else 'secondary' }}">
+                                        {{ '监控中' if product.is_active else '已暂停' }}
+                                    </span>
+                                </td>
+                                <td>
+                                    <div class="btn-group btn-group-sm" role="group">
+                                        <a href="{{ url_for('edit_product', id=product.id) }}" class="btn btn-outline-primary">
+                                            <i class="fas fa-edit"></i>
+                                        </a>
+                                        {% if product.buy_url or product.url %}
+                                        <a href="{{ product.buy_url or product.url }}" target="_blank" class="btn btn-outline-success">
+                                            <i class="fas fa-shopping-cart"></i>
+                                        </a>
+                                        {% endif %}
+                                        <button type="button" class="btn btn-outline-info" data-product-id="{{ product.id }}" data-product-name="{{ product.name }}" onclick="showStockHistory(this)">
+                                            <i class="fas fa-chart-line"></i>
+                                        </button>
+                                    </div>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% else %}
+                <div class="text-center text-muted py-5">
+                    <i class="fas fa-box-open fa-3x mb-3"></i>
+                    <h5>暂无监控商品</h5>
+                    <p>开始添加第一个商品来监控库存变化</p>
+                    <a href="{{ url_for('add_product') }}" class="btn btn-primary">
+                        <i class="fas fa-plus me-1"></i>
+                        添加商品
+                    </a>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 库存历史模态框 -->
+<div class="modal fade" id="stockHistoryModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">
+                    <i class="fas fa-chart-line me-2"></i>
+                    库存历史 - <span id="productName"></span>
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="chart-container">
+                    <canvas id="stockChart"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+let stockChart;
+
+function showStockHistory(button) {
+    const productId = button.getAttribute('data-product-id');
+    const productName = button.getAttribute('data-product-name');
+    document.getElementById('productName').textContent = productName;
+    
+    fetch(`/api/stock_history/${productId}`)
+        .then(response => response.json())
+        .then(data => {
+            if (!data.success) {
+                throw new Error(data.error || '获取历史数据失败');
+            }
+            
+            const modal = new bootstrap.Modal(document.getElementById('stockHistoryModal'));
+            modal.show();
+            
+            // 准备图表数据
+            const histories = data.histories || [];
+            const labels = histories.map(item => {
+                const date = new Date(item.timestamp + ' GMT+8');
+                return date.toLocaleString('zh-CN', {
+                    month: '2-digit',
+                    day: '2-digit', 
+                    hour: '2-digit',
+                    minute: '2-digit'
+                });
+            });
+            const stockData = histories.map(item => item.stock_count);
+            
+            // 销毁现有图表
+            if (stockChart) {
+                stockChart.destroy();
+            }
+            
+            // 创建新图表
+            const ctx = document.getElementById('stockChart').getContext('2d');
+            stockChart = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: labels.reverse(),
+                    datasets: [{
+                        label: '库存数量',
+                        data: stockData.reverse(),
+                        borderColor: '#007bff',
+                        backgroundColor: 'rgba(0, 123, 255, 0.1)',
+                        borderWidth: 2,
+                        fill: true,
+                        tension: 0.4
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            display: true
+                        }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            ticks: {
+                                stepSize: 1
+                            }
+                        }
+                    }
+                }
+            });
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            showAlert('获取库存历史失败', 'danger');
+        });
+}
+
+// 手动触发检查
+function manualCheck() {
+    const btn = event.target.closest('button');
+    const originalHtml = btn.innerHTML;
+    
+    btn.disabled = true;
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i>检查中...';
+    
+    fetch('/api/manual_check', {
+        method: 'POST'
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            showAlert('手动检查完成，正在刷新数据...', 'success');
+            setTimeout(() => {
+                location.reload();
+            }, 1000);
+        } else {
+            showAlert('检查失败: ' + data.message, 'danger');
+        }
+    })
+    .catch(error => {
+        showAlert('网络错误: ' + error.message, 'danger');
+    })
+    .finally(() => {
+        btn.disabled = false;
+        btn.innerHTML = originalHtml;
+    });
+}
+
+// 自动刷新数据
+function refreshData() {
+    fetch('/api/products')
+        .then(response => response.json())
+        .then(data => {
+            // 更新仪表板统计
+            updateDashboardStats(data);
+            
+            // 更新页面上的库存数据
+            data.forEach(product => {
+                // 查找对应的表格行
+                const stockElement = document.querySelector(`[data-product-stock="${product.id}"]`);
+                const statusElement = document.querySelector(`[data-product-status="${product.id}"]`);
+                const timeElement = document.querySelector(`[data-product-time="${product.id}"]`);
+                
+                if (stockElement) {
+                    const oldStock = parseInt(stockElement.dataset.currentStock) || 0;
+                    const newStock = product.current_stock || 0;
+                    
+                    // 更新库存数字
+                    const stockNumberElement = stockElement.querySelector('.fw-bold');
+                    if (stockNumberElement) {
+                        stockNumberElement.textContent = newStock;
+                    }
+                    stockElement.dataset.currentStock = newStock;
+                    
+                    // 显示变化提示
+                    const changeElement = stockElement.querySelector('.stock-change');
+                    if (changeElement) changeElement.remove();
+                    
+                    if (oldStock !== newStock && oldStock !== 0) {
+                        const difference = newStock - oldStock;
+                        const changeSpan = document.createElement('small');
+                        changeSpan.className = `stock-change ${difference > 0 ? 'text-success' : 'text-danger'}`;
+                        changeSpan.innerHTML = `
+                            <br><i class="fas fa-arrow-${difference > 0 ? 'up' : 'down'}"></i>
+                            ${difference > 0 ? '+' : ''}${difference}
+                        `;
+                        stockElement.appendChild(changeSpan);
+                        
+                        // 3秒后移除变化提示
+                        setTimeout(() => {
+                            if (changeSpan && changeSpan.parentNode) {
+                                changeSpan.remove();
+                            }
+                        }, 3000);
+                    }
+                }
+                
+                // 更新库存状态
+                if (statusElement) {
+                    let statusClass = 'stock-in';
+                    let statusText = '库存充足';
+                    
+                    if (product.current_stock === 0) {
+                        statusClass = 'stock-out';
+                        statusText = '缺货';
+                    } else if (product.current_stock < 5) {
+                        statusClass = 'stock-low';
+                        statusText = '库存紧张';
+                    }
+                    
+                    statusElement.className = `stock-status ${statusClass}`;
+                    statusElement.textContent = statusText;
+                }
+                
+                // 更新时间
+                if (timeElement && product.updated_at) {
+                    const updateTime = new Date(product.updated_at);
+                    const options = {timeZone: 'Asia/Shanghai', hour: '2-digit', minute: '2-digit'};
+                    timeElement.textContent = updateTime.toLocaleDateString('zh-CN', {timeZone: 'Asia/Shanghai'}) + ' ' + 
+                                           updateTime.toLocaleTimeString('zh-CN', options);
+                    timeElement.title = updateTime.toLocaleString('zh-CN', {
+                        timeZone: 'Asia/Shanghai',
+                        year: 'numeric',
+                        month: '2-digit',
+                        day: '2-digit',
+                        hour: '2-digit',
+                        minute: '2-digit',
+                        second: '2-digit'
+                    });
+                }
+            });
+        })
+        .catch(error => console.error('刷新数据失败:', error));
+}
+
+// 更新仪表板统计数据
+function updateDashboardStats(products) {
+    console.log('更新仪表板统计，商品数据:', products);
+    
+    const totalProducts = products.length;
+    const inStockProducts = products.filter(p => (p.current_stock || 0) > 0).length;
+    const lowStockProducts = products.filter(p => {
+        const stock = p.current_stock || 0;
+        return stock > 0 && stock < 5;
+    }).length;
+    const outOfStockProducts = products.filter(p => (p.current_stock || 0) === 0).length;
+    
+    console.log('统计结果:', { totalProducts, inStockProducts, lowStockProducts, outOfStockProducts });
+    
+    // 更准确地查找仪表板卡片
+    const totalCard = document.querySelector('.col-lg-3:nth-child(1) h3.text-primary');
+    const inStockCard = document.querySelector('.col-lg-3:nth-child(2) h3.text-success');
+    const lowStockCard = document.querySelector('.col-lg-3:nth-child(3) h3.text-warning');
+    const outStockCard = document.querySelector('.col-lg-3:nth-child(4) h3.text-danger');
+    
+    if (totalCard) {
+        totalCard.textContent = totalProducts;
+        console.log('更新总商品数:', totalProducts);
+    }
+    if (inStockCard) {
+        inStockCard.textContent = inStockProducts;
+        console.log('更新有库存商品:', inStockProducts);
+    }
+    if (lowStockCard) {
+        lowStockCard.textContent = lowStockProducts;
+        console.log('更新低库存商品:', lowStockProducts);
+    }
+    if (outStockCard) {
+        outStockCard.textContent = outOfStockProducts;
+        console.log('更新缺货商品:', outOfStockProducts);
+    }
+}
+
+// 更新系统状态
+function updateSystemStatus() {
+    fetch('/api/system_status')
+        .then(response => response.json())
+        .then(data => {
+            console.log('系统状态数据:', data);
+            
+            // 更新活跃商品数
+            const activeElement = document.getElementById('activeProducts');
+            if (activeElement) {
+                activeElement.textContent = data.active_products || 0;
+            }
+            
+            // 更新有库存商品数
+            const inStockElement = document.getElementById('inStockProducts');
+            if (inStockElement) {
+                inStockElement.textContent = data.in_stock_products || 0;
+            }
+            
+            // 更新当前时间 (互联网时间)
+            if (data.current_time_formatted) {
+                const currentTimeElement = document.getElementById('currentTime');
+                if (currentTimeElement) {
+                    currentTimeElement.textContent = data.current_time_formatted;
+                }
+            }
+            
+            // 更新最后检查时间
+            const lastCheckElement = document.getElementById('lastCheckTime');
+            if (lastCheckElement) {
+                if (data.latest_update_formatted) {
+                    lastCheckElement.textContent = data.latest_update_formatted;
+                } else {
+                    lastCheckElement.textContent = '从未检查';
+                }
+            }
+            
+            // 调试信息
+            if (data.latest_update) {
+                console.log('最后检查时间原始数据:', data.latest_update);
+                console.log('最后检查时间格式化:', data.latest_update_formatted);
+            }
+            
+            // 更新检测间隔显示
+            const checkIntervalElement = document.getElementById('checkInterval');
+            if (checkIntervalElement && data.check_interval) {
+                document.getElementById('checkInterval').textContent = data.check_interval;
+            }
+            
+            // 更新系统状态指示器
+            const statusElement = document.getElementById('systemStatus');
+            if (data.bot_configured && data.notification_channels > 0) {
+                statusElement.className = 'badge bg-success';
+                statusElement.textContent = '运行中';
+            } else {
+                statusElement.className = 'badge bg-warning';
+                statusElement.textContent = '待配置';
+            }
+        })
+        .catch(error => {
+            console.error('更新系统状态失败:', error);
+            const statusElement = document.getElementById('systemStatus');
+            statusElement.className = 'badge bg-danger';
+            statusElement.textContent = '异常';
+        });
+}
+
+// 页面加载时立即更新状态
+updateSystemStatus();
+
+// 每30秒刷新一次数据
+setInterval(() => {
+    refreshData();
+    updateSystemStatus();
+}, 30000);
+</script>
+{% endblock %}

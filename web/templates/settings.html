@@ -1,0 +1,673 @@
+{% extends "base.html" %}
+
+{% block title %}系统设置 - EDUKY-商品监控系统{% endblock %}
+
+{% block page_title %}系统设置{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-lg-8">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0">
+                    <i class="fas fa-cog me-2"></i>
+                    Telegram Bot 配置
+                </h5>
+            </div>
+            <div class="card-body">
+                <form method="POST">
+                    <div class="mb-4">
+                        <label for="telegram_bot_token" class="form-label">
+                            Telegram Bot Token <span class="text-danger">*</span>
+                        </label>
+                        <input type="text" class="form-control" id="telegram_bot_token" name="telegram_bot_token" 
+                               value="{{ config.telegram_bot_token or '' }}" placeholder="123456:ABC-DEF1234ghIkl-zyx57W2v1u123ew11">
+                        <div class="form-text">
+                            从 <a href="https://t.me/botfather" target="_blank">@BotFather</a> 获取Bot Token
+                            <button type="button" class="btn btn-sm btn-outline-info ms-2" onclick="showBotHelp()">
+                                <i class="fas fa-question-circle"></i> 如何创建Bot？
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <hr>
+                    
+                    <!-- 频道通知设置 -->
+                    <div class="mb-4">
+                        <div class="d-flex align-items-center mb-3">
+                            <div class="form-check form-switch">
+                                <input class="form-check-input" type="checkbox" id="channel_enabled" name="channel_enabled" 
+                                       {% if config.channel_enabled %}checked{% endif %}>
+                                <label class="form-check-label fw-bold" for="channel_enabled">
+                                    <i class="fas fa-broadcast-tower me-1"></i>
+                                    频道通知
+                                </label>
+                            </div>
+                        </div>
+                        <div class="row">
+                            <div class="col-md-8">
+                                <label for="channel_id" class="form-label">频道ID</label>
+                                <input type="text" class="form-control" id="channel_id" name="channel_id" 
+                                       value="{{ config.channel_id or '' }}" placeholder="@your_channel 或 -100123456789">
+                                <div class="form-text">
+                                    频道用户名（@channel）或频道ID（数字）
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label">&nbsp;</label>
+                                <button type="button" class="btn btn-outline-primary d-block" onclick="testNotification('channel')">
+                                    <i class="fas fa-paper-plane me-1"></i> 测试通知
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 群组通知设置 -->
+                    <div class="mb-4">
+                        <div class="d-flex align-items-center mb-3">
+                            <div class="form-check form-switch">
+                                <input class="form-check-input" type="checkbox" id="group_enabled" name="group_enabled" 
+                                       {% if config.group_enabled %}checked{% endif %}>
+                                <label class="form-check-label fw-bold" for="group_enabled">
+                                    <i class="fas fa-users me-1"></i>
+                                    群组通知
+                                </label>
+                            </div>
+                        </div>
+                        <div class="row">
+                            <div class="col-md-8">
+                                <label for="group_id" class="form-label">群组ID</label>
+                                <input type="text" class="form-control" id="group_id" name="group_id" 
+                                       value="{{ config.group_id or '' }}" placeholder="-987654321">
+                                <div class="form-text">
+                                    群组ID通常是负数
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label">&nbsp;</label>
+                                <button type="button" class="btn btn-outline-primary d-block" onclick="testNotification('group')">
+                                    <i class="fas fa-paper-plane me-1"></i> 测试通知
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 个人通知设置 -->
+                    <div class="mb-4">
+                        <div class="d-flex align-items-center mb-3">
+                            <div class="form-check form-switch">
+                                <input class="form-check-input" type="checkbox" id="user_enabled" name="user_enabled" 
+                                       {% if config.user_enabled %}checked{% endif %}>
+                                <label class="form-check-label fw-bold" for="user_enabled">
+                                    <i class="fas fa-user me-1"></i>
+                                    个人通知
+                                </label>
+                            </div>
+                        </div>
+                        <div class="row">
+                            <div class="col-md-8">
+                                <label for="user_id" class="form-label">用户ID</label>
+                                <input type="text" class="form-control" id="user_id" name="user_id" 
+                                       value="{{ config.user_id or '' }}" placeholder="123456789">
+                                <div class="form-text">
+                                    您的Telegram用户ID，可从 <a href="https://t.me/userinfobot" target="_blank">@userinfobot</a> 获取
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label">&nbsp;</label>
+                                <button type="button" class="btn btn-outline-primary d-block" onclick="testNotification('user')">
+                                    <i class="fas fa-paper-plane me-1"></i> 测试通知
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <hr>
+
+                    <!-- 通知类型设置 -->
+                    <div class="mb-4">
+                        <h6 class="fw-bold mb-3">
+                            <i class="fas fa-bell me-1"></i>
+                            通知类型设置
+                        </h6>
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="form-check form-switch">
+                                    <input class="form-check-input" type="checkbox" id="restock_enabled" name="restock_enabled" 
+                                           {% if config.restock_enabled %}checked{% endif %}>
+                                    <label class="form-check-label" for="restock_enabled">
+                                        <i class="fas fa-arrow-up text-success me-1"></i>
+                                        补货通知
+                                    </label>
+                                </div>
+                                <div class="form-text">库存增加时发送通知</div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="form-check form-switch">
+                                    <input class="form-check-input" type="checkbox" id="sale_enabled" name="sale_enabled" 
+                                           {% if config.sale_enabled %}checked{% endif %}>
+                                    <label class="form-check-label" for="sale_enabled">
+                                        <i class="fas fa-arrow-down text-warning me-1"></i>
+                                        销售通知
+                                    </label>
+                                </div>
+                                <div class="form-text">库存减少时发送通知</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 检测间隔设置 -->
+                    <div class="mb-4">
+                        <label for="check_interval" class="form-label">
+                            <i class="fas fa-clock me-1"></i>
+                            检测间隔（秒）
+                        </label>
+                        <input type="number" class="form-control" id="check_interval" name="check_interval" 
+                               value="{{ config.check_interval or 60 }}" min="10" max="3600">
+                        <div class="form-text">
+                            每隔多少秒检测一次库存变化，最小10秒，最大3600秒（1小时）
+                        </div>
+                    </div>
+
+                    <hr>
+
+                    <!-- 通知模板设置 -->
+                    <div class="mb-4">
+                        <h6 class="fw-bold mb-3">
+                            <i class="fas fa-edit me-1"></i>
+                            通知模板设置
+                        </h6>
+                        
+                        <!-- 补货通知模板 -->
+                        <div class="mb-3">
+                            <label for="template_restock" class="form-label">
+                                <i class="fas fa-plus-circle text-success me-1"></i>
+                                补货通知模板
+                            </label>
+                            <textarea class="form-control" id="template_restock" name="template_restock" rows="5" 
+                                      placeholder="补货通知模板">{{ config.template_restock or "🎉 补货通知\n\n📦 商品名称: {product_name}\n📈 补货数量: {stock_difference} 件\n📊 当前库存: {current_stock} 件" }}</textarea>
+                            <div class="mt-2">
+                                <button type="button" class="btn btn-sm btn-outline-primary" onclick="previewTemplate('restock')">
+                                    <i class="fas fa-eye me-1"></i> 预览效果
+                                </button>
+                                <button type="button" class="btn btn-sm btn-outline-secondary ms-2" onclick="resetTemplate('restock')">
+                                    <i class="fas fa-undo me-1"></i> 重置默认
+                                </button>
+                            </div>
+                        </div>
+                        
+                        <!-- 销售通知模板 -->
+                        <div class="mb-3">
+                            <label for="template_sale" class="form-label">
+                                <i class="fas fa-shopping-cart text-primary me-1"></i>
+                                销售通知模板
+                            </label>
+                            <textarea class="form-control" id="template_sale" name="template_sale" rows="5" 
+                                      placeholder="销售通知模板">{{ config.template_sale or "🎉 销售通知\n\n📦 商品名称: {product_name}\n📈 被购买: {stock_difference} 件\n📊 剩余库存: {current_stock} 件" }}</textarea>
+                            <div class="mt-2">
+                                <button type="button" class="btn btn-sm btn-outline-primary" onclick="previewTemplate('sale')">
+                                    <i class="fas fa-eye me-1"></i> 预览效果
+                                </button>
+                                <button type="button" class="btn btn-sm btn-outline-secondary ms-2" onclick="resetTemplate('sale')">
+                                    <i class="fas fa-undo me-1"></i> 重置默认
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- 可用变量说明 -->
+                        <div class="alert alert-info">
+                            <h6><i class="fas fa-info-circle me-1"></i> 可用变量和说明</h6>
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <code>{product_name}</code> - 商品名称<br>
+                                    <code>{current_stock}</code> - 当前库存<br>
+                                    <code>{stock_difference}</code> - 库存变化数量
+                                </div>
+                                <div class="col-md-6">
+                                    <code>{previous_stock}</code> - 之前库存<br>
+                                    <code>{check_time}</code> - 检测时间<br>
+                                    <small class="text-muted">注意：购买链接将自动显示为按钮</small>
+                                </div>
+                            </div>
+                            <div class="mt-2">
+                                <strong>💡 提示：</strong>购买链接不需要在模板中添加，系统会自动在消息下方显示"🛒 前往购买"按钮
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="text-end">
+                        <button type="submit" class="btn btn-primary">
+                            <i class="fas fa-save me-1"></i> 保存设置
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- 系统信息侧边栏 -->
+    <div class="col-lg-4">
+        <div class="card">
+            <div class="card-header">
+                <h6 class="mb-0">
+                    <i class="fas fa-info-circle me-1"></i>
+                    系统状态
+                </h6>
+            </div>
+            <div class="card-body">
+                <div class="mb-3">
+                    <small class="text-muted">监控状态</small>
+                    <div class="fw-bold text-success">
+                        <i class="fas fa-circle me-1"></i> 运行中
+                    </div>
+                </div>
+                <div class="mb-3">
+                    <small class="text-muted">当前时间 (互联网时间)</small>
+                    <div class="fw-bold text-info" id="current-internet-time">-</div>
+                </div>
+                <div class="mb-3">
+                    <small class="text-muted">上次检测</small>
+                    <div class="fw-bold" id="last-check-time">刚刚</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="card mt-3">
+            <div class="card-header">
+                <h6 class="mb-0">
+                    <i class="fas fa-tools me-1"></i>
+                    系统维护
+                </h6>
+            </div>
+            <div class="card-body">
+                <!-- 备份功能 -->
+                <div class="mb-3">
+                    <h6 class="text-muted mb-2">
+                        <i class="fas fa-database me-1"></i> 数据备份
+                    </h6>
+                    <button type="button" class="btn btn-outline-primary btn-sm w-100 mb-2" onclick="exportData()">
+                        <i class="fas fa-download me-1"></i> 导出备份数据
+                    </button>
+                    <div class="input-group mb-2">
+                        <input type="file" class="form-control form-control-sm" id="backup_file_input" accept=".json">
+                        <button class="btn btn-outline-success btn-sm" type="button" onclick="importData()">
+                            <i class="fas fa-upload me-1"></i> 导入
+                        </button>
+                    </div>
+                    <small class="text-muted">
+                        <i class="fas fa-info-circle me-1"></i>
+                        导出包含所有商品、配置和历史数据
+                    </small>
+                </div>
+                
+                <!-- 时间同步功能 -->
+                <div class="mb-3">
+                    <h6 class="text-muted mb-2">
+                        <i class="fas fa-clock me-1"></i> 时间同步
+                    </h6>
+                    <button type="button" class="btn btn-outline-info btn-sm w-100" onclick="syncInternetTime()">
+                        <i class="fas fa-sync me-1"></i> 同步互联网时间
+                    </button>
+                    <small class="text-muted mt-1 d-block">
+                        <i class="fas fa-info-circle me-1"></i>
+                        从互联网获取准确时间 (中国时区)
+                    </small>
+                </div>
+                
+                <hr>
+                
+                <!-- 系统维护 -->
+                <div class="mb-3">
+                    <h6 class="text-muted mb-2">
+                        <i class="fas fa-tools me-1"></i> 系统维护
+                    </h6>
+                    <button type="button" class="btn btn-outline-warning btn-sm w-100 mb-2" onclick="clearLogs()">
+                        <i class="fas fa-broom me-1"></i> 清理系统日志
+                    </button>
+                    <button type="button" class="btn btn-outline-info btn-sm w-100 mb-2" onclick="window.location.href='/logs'">
+                        <i class="fas fa-file-alt me-1"></i> 查看系统日志
+                    </button>
+                    <button type="button" class="btn btn-outline-secondary btn-sm w-100" onclick="window.location.href='/change_password'">
+                        <i class="fas fa-key me-1"></i> 修改登录密码
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+function showBotHelp() {
+    Swal.fire({
+        title: '如何创建Telegram Bot？',
+        html: `
+            <div class="text-start">
+                <ol>
+                    <li>在Telegram中搜索 <code>@BotFather</code></li>
+                    <li>发送 <code>/newbot</code> 命令</li>
+                    <li>按提示设置Bot名称和用户名</li>
+                    <li>复制获得的Bot Token到上面的输入框</li>
+                    <li>将Bot添加到您的频道/群组并设为管理员</li>
+                </ol>
+                <div class="alert alert-info mt-3">
+                    <strong>注意：</strong>Bot需要有发送消息的权限
+                </div>
+            </div>
+        `,
+        icon: 'info',
+        confirmButtonText: '知道了'
+    });
+}
+
+function testNotification(type) {
+    const button = event.target;
+    const originalText = button.innerHTML;
+    
+    button.disabled = true;
+    button.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i> 发送中...';
+    
+    fetch('/test_notification', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+            type: type
+        })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            Swal.fire({
+                title: '测试成功！',
+                text: '通知已发送，请检查您的Telegram',
+                icon: 'success',
+                timer: 3000
+            });
+        } else {
+            Swal.fire({
+                title: '测试失败',
+                text: data.message || '发送失败，请检查配置',
+                icon: 'error'
+            });
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        Swal.fire({
+            title: '网络错误',
+            text: '请检查网络连接',
+            icon: 'error'
+        });
+    })
+    .finally(() => {
+        button.disabled = false;
+        button.innerHTML = originalText;
+    });
+}
+
+function previewTemplate(type) {
+    const templates = {
+        'restock': '🎉 补货通知\n\n📦 商品名称: {product_name}\n📈 补货数量: {stock_difference} 件\n📊 当前库存: {current_stock} 件',
+        'sale': '🎉 销售通知\n\n📦 商品名称: {product_name}\n📈 被购买: {stock_difference} 件\n📊 剩余库存: {current_stock} 件'
+    };
+
+    const templateText = document.getElementById('template_' + type).value || templates[type];
+    
+    // 示例数据
+    const sampleData = {
+        product_name: '华为云2',
+        current_stock: type === 'restock' ? 5 : 3,
+        stock_difference: type === 'restock' ? 2 : 1,
+        previous_stock: type === 'restock' ? 3 : 4,
+        check_time: new Date().toLocaleString('zh-CN'),
+        buy_url: 'https://example.com/buy'
+    };
+    
+    // 替换变量
+    let previewText = templateText;
+    Object.keys(sampleData).forEach(key => {
+        const regex = new RegExp(`{${key}}`, 'g');
+        previewText = previewText.replace(regex, sampleData[key]);
+    });
+    
+    Swal.fire({
+        title: type === 'restock' ? '补货通知预览' : '销售通知预览',
+        html: '<div class="text-start"><pre style="white-space: pre-wrap; font-family: inherit;">' + previewText + '</pre><div class="mt-3"><button class="btn btn-primary btn-sm" disabled>🛒 前往购买</button><small class="text-muted ms-2">（实际发送时为可点击按钮）</small></div></div>',
+        icon: 'info',
+        confirmButtonText: '关闭'
+    });
+}
+
+function resetTemplate(type) {
+    const templates = {
+        'restock': '🎉 补货通知\n\n📦 商品名称: {product_name}\n📈 补货数量: {stock_difference} 件\n📊 当前库存: {current_stock} 件',
+        'sale': '🎉 销售通知\n\n📦 商品名称: {product_name}\n📈 被购买: {stock_difference} 件\n📊 剩余库存: {current_stock} 件'
+    };
+    
+    Swal.fire({
+        title: '确认重置',
+        text: '确定要重置为默认模板吗？当前内容将被覆盖。',
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonText: '重置',
+        cancelButtonText: '取消'
+    }).then((result) => {
+        if (result.isConfirmed) {
+            document.getElementById('template_' + type).value = templates[type];
+            Swal.fire('已重置', '模板已重置为默认值', 'success');
+        }
+    });
+}
+
+function exportData() {
+    Swal.fire({
+        title: '导出备份数据',
+        text: '正在生成备份文件...',
+        icon: 'info',
+        showConfirmButton: false,
+        allowOutsideClick: false
+    });
+
+    fetch('/api/export_data')
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                // 创建下载链接
+                const blob = new Blob([JSON.stringify(data.data, null, 2)], { type: 'application/json' });
+                const url = window.URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                
+                // 生成文件名（包含时间戳）
+                const now = new Date();
+                const timestamp = now.getFullYear() + 
+                    String(now.getMonth() + 1).padStart(2, '0') + 
+                    String(now.getDate()).padStart(2, '0') + '_' +
+                    String(now.getHours()).padStart(2, '0') + 
+                    String(now.getMinutes()).padStart(2, '0');
+                a.download = `inventory_backup_${timestamp}.json`;
+                
+                document.body.appendChild(a);
+                a.click();
+                window.URL.revokeObjectURL(url);
+                document.body.removeChild(a);
+                
+                Swal.fire('导出成功', data.message, 'success');
+            } else {
+                Swal.fire('导出失败', data.message || '未知错误', 'error');
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            Swal.fire('网络错误', '请检查网络连接', 'error');
+        });
+}
+
+function importData() {
+    const fileInput = document.getElementById('backup_file_input');
+    const file = fileInput.files[0];
+    
+    if (!file) {
+        Swal.fire('请选择文件', '请先选择要导入的备份文件', 'warning');
+        return;
+    }
+    
+    if (!file.name.endsWith('.json')) {
+        Swal.fire('文件格式错误', '请选择JSON格式的备份文件', 'error');
+        return;
+    }
+    
+    Swal.fire({
+        title: '确认导入',
+        html: `
+            <div class="text-start">
+                <p><strong>文件名:</strong> ${file.name}</p>
+                <p><strong>文件大小:</strong> ${(file.size / 1024).toFixed(2)} KB</p>
+                <div class="alert alert-warning mt-3">
+                    <i class="fas fa-exclamation-triangle me-2"></i>
+                    <strong>注意:</strong>
+                    <ul class="mb-0 mt-2">
+                        <li>导入会添加新的商品数据（不会覆盖现有商品）</li>
+                        <li>如果通知配置不存在，会导入备份的配置</li>
+                        <li>建议在导入前先导出当前数据作为备份</li>
+                    </ul>
+                </div>
+            </div>
+        `,
+        icon: 'question',
+        showCancelButton: true,
+        confirmButtonText: '确认导入',
+        cancelButtonText: '取消',
+        confirmButtonColor: '#28a745'
+    }).then((result) => {
+        if (result.isConfirmed) {
+            const formData = new FormData();
+            formData.append('backup_file', file);
+            
+            Swal.fire({
+                title: '导入中...',
+                text: '正在处理备份文件，请稍候',
+                icon: 'info',
+                showConfirmButton: false,
+                allowOutsideClick: false
+            });
+            
+            fetch('/api/import_data', {
+                method: 'POST',
+                body: formData
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    Swal.fire({
+                        title: '导入成功',
+                        text: data.message,
+                        icon: 'success',
+                        confirmButtonText: '刷新页面'
+                    }).then(() => {
+                        window.location.reload();
+                    });
+                } else {
+                    Swal.fire('导入失败', data.message || '未知错误', 'error');
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                Swal.fire('网络错误', '请检查网络连接', 'error');
+            });
+        }
+    });
+}
+
+function clearLogs() {
+    Swal.fire({
+        title: '清理系统日志',
+        text: '确定要清理所有系统日志吗？此操作不可撤销。',
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonText: '清理',
+        cancelButtonText: '取消'
+    }).then((result) => {
+        if (result.isConfirmed) {
+            fetch('/clear_logs', {
+                method: 'POST'
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    Swal.fire('清理完成', '系统日志已清理', 'success');
+                } else {
+                    Swal.fire('清理失败', data.message || '未知错误', 'error');
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                Swal.fire('网络错误', '请检查网络连接', 'error');
+            });
+        }
+    });
+}
+
+// 同步互联网时间
+function syncInternetTime() {
+    Swal.fire({
+        title: '正在同步时间...',
+        text: '从互联网获取准确时间中',
+        icon: 'info',
+        showConfirmButton: false,
+        allowOutsideClick: false
+    });
+    
+    fetch('/api/sync_time', {
+        method: 'POST'
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            // 更新页面上的时间显示
+            const currentTimeElement = document.getElementById('current-internet-time');
+            if (currentTimeElement) {
+                currentTimeElement.textContent = data.formatted_time;
+            }
+            
+            Swal.fire({
+                title: '时间同步成功',
+                text: `当前互联网时间：${data.formatted_time}`,
+                icon: 'success',
+                confirmButtonText: '确定'
+            });
+        } else {
+            Swal.fire('同步失败', data.error || '时间同步失败', 'error');
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        Swal.fire('网络错误', '请检查网络连接', 'error');
+    });
+}
+
+// 定时更新当前时间显示
+function updateCurrentTime() {
+    fetch('/api/system_status')
+        .then(response => response.json())
+        .then(data => {
+            const currentTimeElement = document.getElementById('current-internet-time');
+            if (currentTimeElement && data.current_time_formatted) {
+                currentTimeElement.textContent = data.current_time_formatted;
+            }
+        })
+        .catch(error => {
+            console.error('更新时间失败:', error);
+        });
+}
+
+// 页面加载时开始定时更新
+document.addEventListener('DOMContentLoaded', function() {
+    updateCurrentTime(); // 立即更新一次
+    setInterval(updateCurrentTime, 30000); // 每30秒更新一次
+});
+</script>
+{% endblock %}

@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>登录 - EDUKY-商品监控系统</title>
+    <link href="https://cdn.bootcdn.net/ajax/libs/bootstrap/5.3.0/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.bootcdn.net/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <style>
+        body {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .login-card {
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.2);
+            overflow: hidden;
+            max-width: 400px;
+            width: 100%;
+        }
+        .login-header {
+            background: linear-gradient(135deg, #6f42c1, #8e44ad);
+            color: white;
+            padding: 2rem;
+            text-align: center;
+        }
+        .login-body {
+            padding: 2rem;
+        }
+        .form-control {
+            border: none;
+            border-bottom: 2px solid #e9ecef;
+            border-radius: 0;
+            padding: 1rem 0;
+            background: transparent;
+            transition: border-color 0.3s;
+        }
+        .form-control:focus {
+            border-color: #6f42c1;
+            box-shadow: none;
+            background: transparent;
+        }
+        .btn-login {
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            border: none;
+            border-radius: 50px;
+            padding: 0.75rem 2rem;
+            width: 100%;
+            color: white;
+            font-weight: 500;
+            transition: all 0.3s;
+        }
+        .btn-login:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+            color: white;
+        }
+        .alert {
+            border: none;
+            border-radius: 10px;
+        }
+        .input-group {
+            margin-bottom: 1.5rem;
+        }
+        .input-group-text {
+            background: transparent;
+            border: none;
+            border-bottom: 2px solid #e9ecef;
+            border-radius: 0;
+            color: #6c757d;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="login-card mx-auto">
+            <div class="login-header">
+                <h2 class="mb-0">
+                    <i class="fas fa-unicorn me-2"></i>
+                    EDUKY-商品监控系统
+                </h2>
+                <p class="mb-0 mt-2 opacity-75">请登录以继续使用</p>
+            </div>
+            
+            <div class="login-body">
+                {% with messages = get_flashed_messages(with_categories=true) %}
+                    {% if messages %}
+                        {% for category, message in messages %}
+                            <div class="alert alert-{{ 'danger' if category == 'error' else category }} alert-dismissible fade show">
+                                <i class="fas fa-{{ 'exclamation-triangle' if category == 'error' else 'check' }} me-2"></i>
+                                {{ message }}
+                                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                            </div>
+                        {% endfor %}
+                    {% endif %}
+                {% endwith %}
+                
+                <form method="POST">
+                    <div class="input-group">
+                        <span class="input-group-text">
+                            <i class="fas fa-user"></i>
+                        </span>
+                        <input type="text" 
+                               class="form-control" 
+                               name="username" 
+                               placeholder="用户名" 
+                               required 
+                               autocomplete="username"
+                               value="{{ request.form.username or '' }}">
+                    </div>
+                    
+                    <div class="input-group">
+                        <span class="input-group-text">
+                            <i class="fas fa-lock"></i>
+                        </span>
+                        <input type="password" 
+                               class="form-control" 
+                               name="password" 
+                               placeholder="密码" 
+                               required 
+                               autocomplete="current-password">
+                    </div>
+                    
+                    <button type="submit" class="btn btn-login">
+                        <i class="fas fa-sign-in-alt me-2"></i>
+                        登录
+                    </button>
+                </form>
+                
+                <div class="text-center mt-4">
+                    <div class="alert alert-warning border-warning py-3 mb-0" role="alert" style="border-left: 4px solid #ffc107; background: linear-gradient(45deg, #fff3cd, #fefcf3);">
+                        <div class="d-flex align-items-center justify-content-center">
+                            <i class="fas fa-shield-alt text-warning me-2" style="font-size: 1.2rem;"></i>
+                            <div class="text-start">
+                                <div class="fw-bold text-warning mb-1">🔐 安全提醒</div>
+                                <small class="text-dark">
+                                    首次登录后请立即修改默认密码，确保系统安全
+                                </small>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <script src="https://cdn.bootcdn.net/ajax/libs/bootstrap/5.3.0/js/bootstrap.bundle.min.js"></script>
+    
+    <!-- 自动聚焦到用户名输入框 -->
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const usernameInput = document.querySelector('input[name="username"]');
+            if (usernameInput && !usernameInput.value) {
+                usernameInput.focus();
+            }
+        });
+    </script>
+</body>
+</html>

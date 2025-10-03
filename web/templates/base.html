@@ -1,0 +1,434 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}EDUKY-商品监控系统{% endblock %}</title>
+    <link href="https://cdn.bootcdn.net/ajax/libs/bootstrap/5.3.0/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.bootcdn.net/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/sweetalert2@11.7.12/dist/sweetalert2.min.css" rel="stylesheet">
+    <style>
+        .navbar-brand {
+            font-weight: bold;
+            color: #6f42c1 !important;
+        }
+        .card {
+            transition: transform 0.2s;
+            border: none;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(0,0,0,0.15);
+        }
+        .stock-status {
+            padding: 0.25rem 0.5rem;
+            border-radius: 0.375rem;
+            font-size: 0.875rem;
+            font-weight: 500;
+        }
+        .stock-in {
+            background-color: #d1e7dd;
+            color: #0f5132;
+        }
+        .stock-out {
+            background-color: #f8d7da;
+            color: #721c24;
+        }
+        .stock-low {
+            background-color: #fff3cd;
+            color: #856404;
+        }
+        .sidebar {
+            min-height: 100vh;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        }
+        .sidebar .nav-link {
+            color: rgba(255,255,255,0.8);
+            transition: all 0.3s;
+        }
+        .sidebar .nav-link:hover,
+        .sidebar .nav-link.active {
+            color: #fff;
+            background-color: rgba(255,255,255,0.1);
+            border-radius: 0.375rem;
+        }
+        .content-wrapper {
+            background-color: #f8f9fa;
+            min-height: calc(100vh - 45px);
+        }
+        
+        body {
+            display: flex;
+            flex-direction: column;
+            min-height: 100vh;
+        }
+        
+        .main-container {
+            flex: 1;
+        }
+        
+        footer {
+            margin-top: auto;
+            font-size: 0.85rem;
+        }
+        
+        footer a {
+            transition: color 0.2s ease;
+            font-size: 0.8rem;
+        }
+        
+        footer a:hover {
+            color: #6f42c1 !important;
+        }
+        .chart-container {
+            position: relative;
+            height: 300px;
+        }
+        .notification-badge {
+            position: absolute;
+            top: -5px;
+            right: -5px;
+            background: #dc3545;
+            color: white;
+            border-radius: 50%;
+            width: 20px;
+            height: 20px;
+            font-size: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+    </style>
+</head>
+<body>
+    <div class="container-fluid main-container">
+        <div class="row">
+            <!-- 侧边栏 -->
+            <nav class="col-md-3 col-lg-2 d-md-block sidebar collapse">
+                <div class="position-sticky pt-3">
+                    <div class="text-center mb-4">
+                        <h5 class="text-white">
+                            <i class="fas fa-unicorn"></i>
+                            EDUKY-商品监控系统
+                        </h5>
+                    </div>
+                    
+                    <ul class="nav flex-column">
+                        <li class="nav-item">
+                            <a class="nav-link {% if request.endpoint == 'index' %}active{% endif %}" href="{{ url_for('index') }}">
+                                <i class="fas fa-tachometer-alt me-2"></i>
+                                仪表板
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link {% if request.endpoint in ['products', 'add_product', 'edit_product'] %}active{% endif %}" href="{{ url_for('products') }}">
+                                <i class="fas fa-box me-2"></i>
+                                商品管理
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link {% if request.endpoint == 'settings' %}active{% endif %}" href="{{ url_for('settings') }}">
+                                <i class="fas fa-cogs me-2"></i>
+                                系统设置
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link {% if request.endpoint == 'logs_page' %}active{% endif %}" href="{{ url_for('logs_page') }}">
+                                <i class="fas fa-list me-2"></i>
+                                监控日志
+                            </a>
+                        </li>
+                    </ul>
+                    
+                    <hr class="my-3" style="border-color: rgba(255,255,255,0.3);">
+                    
+                    <!-- 用户信息 -->
+                    <div class="px-3 mb-3">
+                        <div class="text-white mb-3">
+                            <i class="fas fa-user me-2"></i>
+                            {{ session.username or 'admin' }}
+                        </div>
+                        <div class="d-flex gap-2">
+                            <button class="btn btn-outline-warning btn-sm" onclick="showChangePasswordModal()" title="修改密码">
+                                <i class="fas fa-key me-1"></i>密码
+                            </button>
+                            <a href="{{ url_for('logout') }}" class="btn btn-outline-light btn-sm" title="注销登录">
+                                <i class="fas fa-sign-out-alt me-1"></i>注销
+                            </a>
+                        </div>
+                    </div>
+                    
+                    <div class="px-3">
+                        <small class="text-white-50">
+                            <i class="fas fa-clock me-1"></i>
+                            最后更新: <span id="lastUpdate"></span>
+                        </small>
+                    </div>
+                </div>
+            </nav>
+
+            <!-- 主内容区 -->
+            <main class="col-md-9 ms-sm-auto col-lg-10 px-md-4 content-wrapper">
+                <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+                    <h1 class="h2">{% block page_title %}仪表板{% endblock %}</h1>
+                    <div class="btn-toolbar mb-2 mb-md-0">
+                        {% block page_actions %}{% endblock %}
+                    </div>
+                </div>
+
+                <!-- 闪现消息 -->
+                {% with messages = get_flashed_messages(with_categories=true) %}
+                    {% if messages %}
+                        {% for category, message in messages %}
+                            <div class="alert alert-{{ 'success' if category == 'success' else 'danger' }} alert-dismissible fade show" role="alert">
+                                {{ message }}
+                                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                            </div>
+                        {% endfor %}
+                    {% endif %}
+                {% endwith %}
+
+                {% block content %}{% endblock %}
+            </main>
+        </div>
+    </div>
+
+    <!-- 页脚 -->
+    <footer class="bg-light border-top mt-auto py-2">
+        <div class="container-fluid px-3">
+            <div class="row align-items-center">
+                <div class="col-md-8">
+                    <small class="text-muted d-flex align-items-center">
+                        <i class="far fa-copyright me-1" style="font-size: 0.8rem;"></i>
+                        <strong>EDUKY</strong> 
+                        <span class="mx-1">•</span>
+                        EDUKY-商品监控系统
+                    </small>
+                </div>
+                <div class="col-md-4 text-md-end mt-1 mt-md-0">
+                    <div class="d-flex justify-content-md-end justify-content-start align-items-center gap-2">
+                        <a href="https://github.com/eduky/faka-monitor" 
+                           target="_blank" 
+                           class="text-decoration-none text-muted small"
+                           title="查看GitHub项目">
+                            <i class="fab fa-github me-1"></i>GitHub
+                        </a>
+                        <span class="text-muted small">|</span>
+                        <a href="https://t.me/eduKaiYuan" 
+                           target="_blank" 
+                           class="text-decoration-none text-muted small"
+                           title="加入Telegram频道">
+                            <i class="fab fa-telegram me-1"></i>Telegram
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </footer>
+
+    <!-- 脚本文件 -->
+    <script src="https://cdn.bootcdn.net/ajax/libs/bootstrap/5.3.0/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdn.bootcdn.net/ajax/libs/Chart.js/3.9.1/chart.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11.7.12/dist/sweetalert2.all.min.js"></script>
+    <script>
+        // 更新最后更新时间
+        function updateLastUpdateTime() {
+            const now = new Date();
+            document.getElementById('lastUpdate').textContent = now.toLocaleString('zh-CN', {
+                timeZone: 'Asia/Shanghai',
+                year: 'numeric',
+                month: '2-digit',
+                day: '2-digit',
+                hour: '2-digit',
+                minute: '2-digit',
+                second: '2-digit'
+            });
+        }
+        
+        // 页面加载时更新时间
+        updateLastUpdateTime();
+        
+        // 每分钟更新一次时间
+        setInterval(updateLastUpdateTime, 60000);
+        
+        // 显示提示消息
+        function showAlert(message, type = 'info') {
+            const alertDiv = document.createElement('div');
+            alertDiv.className = `alert alert-${type} alert-dismissible fade show`;
+            alertDiv.innerHTML = `
+                ${message}
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            `;
+            
+            const container = document.querySelector('main .container-fluid, main');
+            if (container) {
+                container.insertBefore(alertDiv, container.firstChild);
+                
+                // 3秒后自动消失
+                setTimeout(() => {
+                    if (alertDiv && alertDiv.parentNode) {
+                        alertDiv.remove();
+                    }
+                }, 3000);
+            }
+        }
+        
+        // 格式化数字
+        function formatNumber(num) {
+            return new Intl.NumberFormat('zh-CN').format(num);
+        }
+        
+        // 格式化日期
+        function formatDate(dateString) {
+            return new Date(dateString).toLocaleString('zh-CN', {
+                timeZone: 'Asia/Shanghai',
+                year: 'numeric',
+                month: '2-digit',
+                day: '2-digit',
+                hour: '2-digit',
+                minute: '2-digit',
+                second: '2-digit'
+            });
+        }
+        
+        // 显示修改密码模态框
+        function showChangePasswordModal() {
+            window.location.href = '/change_password';
+        }
+        
+        // 会话超时检查 (每5分钟检查一次)
+        function checkSessionTimeout() {
+            fetch('/api/check_session')
+                .then(response => response.json())
+                .then(data => {
+                    if (!data.valid) {
+                        showAlert('会话已过期，请重新登录', 'warning');
+                        setTimeout(() => {
+                            window.location.href = '/login';
+                        }, 2000);
+                    } else if (data.remaining_minutes < 10) {
+                        showAlert(`会话将在 ${data.remaining_minutes} 分钟后过期`, 'info');
+                    }
+                })
+                .catch(error => {
+                    console.warn('检查会话状态失败:', error);
+                });
+        }
+        
+        // 每5分钟检查一次会话状态
+        {% if session.user_id %}
+            setInterval(checkSessionTimeout, 5 * 60 * 1000);
+        {% endif %}
+        
+        // 修改密码
+        function changePassword() {
+            const currentPassword = document.getElementById('currentPassword').value;
+            const newPassword = document.getElementById('newPassword').value;
+            const confirmPassword = document.getElementById('confirmPassword').value;
+            
+            // 验证输入
+            if (!currentPassword || !newPassword || !confirmPassword) {
+                Swal.fire('错误', '请填写所有字段', 'error');
+                return;
+            }
+            
+            if (newPassword !== confirmPassword) {
+                Swal.fire('错误', '新密码和确认密码不匹配', 'error');
+                return;
+            }
+            
+            if (newPassword.length < 6) {
+                Swal.fire('错误', '新密码长度不能少于6位', 'error');
+                return;
+            }
+            
+            // 发送请求
+            fetch('/api/change_password', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    current_password: currentPassword,
+                    new_password: newPassword
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    Swal.fire('成功', '密码修改成功', 'success');
+                    // 关闭模态框并清空表单
+                    bootstrap.Modal.getInstance(document.getElementById('changePasswordModal')).hide();
+                    document.getElementById('changePasswordForm').reset();
+                } else {
+                    Swal.fire('错误', data.message || '密码修改失败', 'error');
+                }
+            })
+            .catch(error => {
+                Swal.fire('错误', '网络错误，请稍后重试', 'error');
+                console.error('Error:', error);
+            });
+        }
+    </script>
+    
+    <!-- 修改密码模态框 -->
+    <div class="modal fade" id="changePasswordModal" tabindex="-1" aria-labelledby="changePasswordModalLabel" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="changePasswordModalLabel">
+                        <i class="fas fa-key me-2"></i>修改密码
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="changePasswordForm">
+                        <div class="mb-3">
+                            <label for="currentPassword" class="form-label">当前密码</label>
+                            <div class="input-group">
+                                <span class="input-group-text">
+                                    <i class="fas fa-lock"></i>
+                                </span>
+                                <input type="password" class="form-control" id="currentPassword" placeholder="请输入当前密码" required>
+                            </div>
+                        </div>
+                        <div class="mb-3">
+                            <label for="newPassword" class="form-label">新密码</label>
+                            <div class="input-group">
+                                <span class="input-group-text">
+                                    <i class="fas fa-key"></i>
+                                </span>
+                                <input type="password" class="form-control" id="newPassword" placeholder="请输入新密码（至少6位）" required>
+                            </div>
+                        </div>
+                        <div class="mb-3">
+                            <label for="confirmPassword" class="form-label">确认新密码</label>
+                            <div class="input-group">
+                                <span class="input-group-text">
+                                    <i class="fas fa-check-circle"></i>
+                                </span>
+                                <input type="password" class="form-control" id="confirmPassword" placeholder="请再次输入新密码" required>
+                            </div>
+                        </div>
+                        <div class="alert alert-info">
+                            <i class="fas fa-info-circle me-2"></i>
+                            <small>密码长度至少6位，建议包含字母和数字</small>
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                        <i class="fas fa-times me-2"></i>取消
+                    </button>
+                    <button type="button" class="btn btn-primary" onclick="changePassword()">
+                        <i class="fas fa-save me-2"></i>保存修改
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    {% block scripts %}{% endblock %}
+</body>
+</html>

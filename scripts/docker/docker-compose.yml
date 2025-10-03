@@ -1,0 +1,23 @@
+version: "3.9"
+services:
+  eduky-monitor:
+    build: .              # 或使用 image: yourrepo/eduky-monitor:latest
+    container_name: eduky-monitor
+    restart: unless-stopped
+    ports:
+      - "5000:5000"
+    environment:
+      - PYTHONUNBUFFERED=1
+    volumes:
+      - eduky_data:/opt/eduky-monitor/web/instance
+      - eduky_logs:/var/log/eduky-monitor
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "http://127.0.0.1:5000/"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 20s
+
+volumes:
+  eduky_data:
+  eduky_logs:
