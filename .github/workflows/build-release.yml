@@ -11,6 +11,9 @@ on:
         required: true
         default: 'v1.0.0'
 
+permissions:
+  contents: write
+  
 jobs:
   build:
     runs-on: ${{ matrix.os }}
@@ -20,11 +23,11 @@ jobs:
           - os: windows-latest
             platform: windows
             ext: .exe
-            python-version: '3.9'
+            python-version: '3.11'
           - os: ubuntu-latest
             platform: linux
             ext: ''
-            python-version: '3.9'
+            python-version: '3.11'
 
     steps:
     - name: Checkout code
@@ -41,12 +44,18 @@ jobs:
         pip install -r requirements.txt
         pip install pyinstaller
 
+    - name: Create logs directory
+      run: |
+        mkdir -p logs
+        echo "logs directory created" > logs/.gitkeep
+      shell: bash
+
     - name: Create build script (Windows)
       if: matrix.platform == 'windows'
       run: |
         echo @echo off > build.bat
         echo echo Building EDUKY-Monitor for Windows... >> build.bat
-        echo pyinstaller --onefile --windowed --name eduky-monitor-windows --icon=web/static/favicon.ico --add-data "web;web" --add-data "logs;logs" --hidden-import=APScheduler --hidden-import=flask --hidden-import=requests run_app.py >> build.bat
+        echo pyinstaller --onefile --console --name eduky-monitor-windows --add-data "web;web" --hidden-import=APScheduler --hidden-import=flask --hidden-import=requests --hidden-import=flask_sqlalchemy --hidden-import=sqlalchemy --hidden-import=beautifulsoup4 --hidden-import=bs4 --hidden-import=lxml --hidden-import=werkzeug --hidden-import=pytz --hidden-import=ntplib run_app.py >> build.bat
         echo echo Build completed! >> build.bat
       shell: cmd
 
@@ -56,12 +65,19 @@ jobs:
         cat > build.sh << 'EOF'
         #!/bin/bash
         echo "Building EDUKY-Monitor for Linux..."
-        pyinstaller --onefile --name eduky-monitor-linux \
+        pyinstaller --onefile --console --name eduky-monitor-linux \
           --add-data "web:web" \
-          --add-data "logs:logs" \
           --hidden-import=APScheduler \
           --hidden-import=flask \
           --hidden-import=requests \
+          --hidden-import=flask_sqlalchemy \
+          --hidden-import=sqlalchemy \
+          --hidden-import=beautifulsoup4 \
+          --hidden-import=bs4 \
+          --hidden-import=lxml \
+          --hidden-import=werkzeug \
+          --hidden-import=pytz \
+          --hidden-import=ntplib \
           run_app.py
         echo "Build completed!"
         EOF
@@ -170,7 +186,7 @@ jobs:
         tar -czf ../eduky-monitor-${{ matrix.platform }}.tar.gz *
 
     - name: Upload artifact
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
         name: eduky-monitor-${{ matrix.platform }}
         path: eduky-monitor-${{ matrix.platform }}.tar.gz
@@ -179,13 +195,15 @@ jobs:
     needs: build
     runs-on: ubuntu-latest
     if: startsWith(github.ref, 'refs/tags/') || github.event_name == 'workflow_dispatch'
+    permissions:
+      contents: write
     
     steps:
     - name: Checkout code
       uses: actions/checkout@v4
 
     - name: Download all artifacts
-      uses: actions/download-artifact@v3
+      uses: actions/download-artifact@v4
 
     - name: Get release version
       id: get_version
@@ -198,12 +216,12 @@ jobs:
 
     - name: Create Release
       id: create_release
-      uses: actions/create-release@v1
+      uses: softprops/action-gh-release@v1
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       with:
         tag_name: ${{ steps.get_version.outputs.version }}
-        release_name: EDUKY-Monitor ${{ steps.get_version.outputs.version }}
+        name: EDUKY-Monitor ${{ steps.get_version.outputs.version }}
         body: |
           ## EDUKY-Monitor ${{ steps.get_version.outputs.version }} 发行版
 
@@ -235,23 +253,6 @@ jobs:
           - 程序数据保存在运行目录下
         draft: false
         prerelease: false
-
-    - name: Upload Windows Release Asset
-      uses: actions/upload-release-asset@v1
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      with:
-        upload_url: ${{ steps.create_release.outputs.upload_url }}
-        asset_path: ./eduky-monitor-windows/eduky-monitor-windows.tar.gz
-        asset_name: eduky-monitor-windows.tar.gz
-        asset_content_type: application/gzip
-
-    - name: Upload Linux Release Asset
-      uses: actions/upload-release-asset@v1
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      with:
-        upload_url: ${{ steps.create_release.outputs.upload_url }}
-        asset_path: ./eduky-monitor-linux/eduky-monitor-linux.tar.gz
-        asset_name: eduky-monitor-linux.tar.gz
-        asset_content_type: application/gzip
+        files: |
+          eduky-monitor-windows/eduky-monitor-windows.tar.gz
+          eduky-monitor-linux/eduky-monitor-linux.tar.gz
