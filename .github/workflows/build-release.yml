@@ -96,7 +96,17 @@ jobs:
       if: matrix.platform == 'windows'
       run: |
         echo @echo off > dist/start-eduky-monitor.bat
-        echo echo Starting EDUKY-Monitor... >> dist/start-eduky-monitor.bat
+        echo chcp 65001 ^>nul >> dist/start-eduky-monitor.bat
+        echo title EDUKY-Monitor 库存监控系统 >> dist/start-eduky-monitor.bat
+        echo echo. >> dist/start-eduky-monitor.bat
+        echo echo ======================================== >> dist/start-eduky-monitor.bat
+        echo echo      EDUKY-Monitor 库存监控系统 >> dist/start-eduky-monitor.bat
+        echo echo ======================================== >> dist/start-eduky-monitor.bat
+        echo echo 启动后请访问: http://localhost:5000 >> dist/start-eduky-monitor.bat
+        echo echo 默认用户名: admin, 密码: admin123 >> dist/start-eduky-monitor.bat
+        echo echo 按 Ctrl+C 停止程序 >> dist/start-eduky-monitor.bat
+        echo echo ======================================== >> dist/start-eduky-monitor.bat
+        echo echo. >> dist/start-eduky-monitor.bat
         echo eduky-monitor-windows.exe >> dist/start-eduky-monitor.bat
         echo pause >> dist/start-eduky-monitor.bat
 

@@ -1,4 +1,5 @@
 @echo off
+chcp 65001 >nul
 echo ======================================
 echo    EDUKY-Monitor 本地构建脚本
 echo ======================================
@@ -92,11 +93,20 @@ if %errorlevel% neq 0 (
 echo.
 echo 正在创建启动脚本...
 echo @echo off > dist\start-eduky-monitor.bat
-echo echo 正在启动 EDUKY-Monitor... >> dist\start-eduky-monitor.bat
+echo chcp 65001 ^>nul >> dist\start-eduky-monitor.bat
+echo title EDUKY-Monitor 库存监控系统 >> dist\start-eduky-monitor.bat
+echo echo. >> dist\start-eduky-monitor.bat
+echo echo ======================================== >> dist\start-eduky-monitor.bat
+echo echo      EDUKY-Monitor 库存监控系统 >> dist\start-eduky-monitor.bat
+echo echo ======================================== >> dist\start-eduky-monitor.bat
 echo echo 启动后请访问: http://localhost:5000 >> dist\start-eduky-monitor.bat
 echo echo 默认用户名: admin, 密码: admin123 >> dist\start-eduky-monitor.bat
+echo echo 按 Ctrl+C 停止程序 >> dist\start-eduky-monitor.bat
+echo echo ======================================== >> dist\start-eduky-monitor.bat
 echo echo. >> dist\start-eduky-monitor.bat
 echo eduky-monitor-windows.exe >> dist\start-eduky-monitor.bat
+echo echo. >> dist\start-eduky-monitor.bat
+echo echo 程序已关闭 >> dist\start-eduky-monitor.bat
 echo pause >> dist\start-eduky-monitor.bat
 
 echo.

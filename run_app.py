@@ -9,6 +9,14 @@ import sys
 import logging
 from logging.handlers import RotatingFileHandler
 
+# 设置系统编码为UTF-8 (Windows兼容性)
+if sys.platform.startswith('win'):
+    try:
+        import locale
+        locale.setlocale(locale.LC_ALL, 'zh_CN.UTF-8')
+    except:
+        pass
+
 # 确保logs目录存在
 os.makedirs('logs', exist_ok=True)
 

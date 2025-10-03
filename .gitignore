@@ -135,9 +135,13 @@ Thumbs.db
 
 # Project specific
 logs/*.log
+logs/*.txt
 *.db
+*.sqlite
+*.sqlite3
 config.py
 secret_key.txt
+web/instance/*.db
 
 # PyInstaller build files
 build/
@@ -145,3 +149,23 @@ dist/
 *.spec
 __pycache__/
 *.pyc
+*.pyo
+
+# IDE and Editor files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Temporary files
+*.tmp
+*.temp
+.DS_Store
+Thumbs.db
+
+# Environment files
+.env
+.venv
+env/
+venv/

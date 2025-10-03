@@ -1,10 +1,11 @@
 @echo off
-chcp 6:: 设置变量
+chcp 65001 >nul
+:: 设置变量
 set "APP_NAME=EdUKYMonitor"
 set "SCRIPT_DIR=%~dp0"
 set "APP_DIR=%SCRIPT_DIR%..\.."
 set "SERVICE_NAME=EdUKYMonitorService"
-set "PYTHON_EXE=py"nul
+set "PYTHON_EXE=python"nul
 echo.
 echo ========================================
 echo   EDUKY-商品监控系统 - Windows服务部署
