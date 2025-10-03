@@ -1,5 +1,10 @@
 # EDUKY-Monitor
 
+[![CI/CD](https://github.com/eduky/EDUKY-Monitor/actions/workflows/ci-cd.yml/badge.svg)](https://github.com/eduky/EDUKY-Monitor/actions/workflows/ci-cd.yml)
+[![Docker](https://github.com/eduky/EDUKY-Monitor/actions/workflows/docker.yml/badge.svg)](https://github.com/eduky/EDUKY-Monitor/actions/workflows/docker.yml)
+[![Code Quality](https://github.com/eduky/EDUKY-Monitor/actions/workflows/code-quality.yml/badge.svg)](https://github.com/eduky/EDUKY-Monitor/actions/workflows/code-quality.yml)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+
 一个用于监控库存的Web应用程序。
 
 ## 功能特性
