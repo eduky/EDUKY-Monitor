@@ -4,10 +4,7 @@ requests==2.31.0
 APScheduler==3.10.4
 beautifulsoup4==4.12.2
 python-telegram-bot==20.7
-lxml>=4.9.3
+lxml==4.9.3
 Werkzeug==2.3.7
 pytz==2023.3
 ntplib==0.4.0
-
-# 构建工具 (开发环境使用)
-pyinstaller>=6.10.0
